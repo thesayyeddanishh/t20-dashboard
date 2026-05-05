@@ -117,7 +117,7 @@ def create_crease_beehive(df_in, delivery_type):
     
     num_regions = len(ordered_zones)
     box_width = 1 / num_regions
-    box_height = 0.5  # Increased slightly to fit two lines of text
+    box_height = 1  # Increased slightly to fit two lines of text
     left = 0
     
     # 4. COLOR NORMALIZATION BY STRIKE RATE
