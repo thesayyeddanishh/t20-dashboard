@@ -22,7 +22,7 @@ def create_pacer_pitch_map(df_in):
             "Slot": [2.5, 5.8],
             "Length": [5.8, 8],
             "Short": [8, 10],
-            "Bouncer": [10, 18]
+            "Bouncer": [10, 15]
     }
 
     if df_in.empty:
@@ -37,7 +37,7 @@ def create_pacer_pitch_map(df_in):
     pitch_non_wickets = df_in[df_in["Wicket"] == False]
     
     # --- Chart Setup ---
-    fig, ax = plt.subplots(figsize=(4,6)) # Maintained figsize=(4,6)
+    fig, ax = plt.subplots(figsize=(5,6))
     ax.set_facecolor('white')
     fig.patch.set_facecolor('white')
 
@@ -70,7 +70,7 @@ def create_pacer_pitch_map(df_in):
     # Non-Wickets (light grey)
     ax.scatter(
         pitch_non_wickets["BounceY"], pitch_non_wickets["BounceX"], 
-        s=60, 
+        s=70, 
         c='#D3D3D3', 
         edgecolor='white', 
         linewidths=1.0, 
@@ -81,7 +81,7 @@ def create_pacer_pitch_map(df_in):
     # Wickets (red)
     ax.scatter(
         pitch_wickets["BounceY"], pitch_wickets["BounceX"], 
-        s=90, 
+        s=100, 
         c='red', 
         edgecolor='white', 
         linewidths=1.0, 
@@ -90,9 +90,9 @@ def create_pacer_pitch_map(df_in):
     )
     
     # --- 2. Add Stump lines (Vertical Lines) ---
-    ax.axvline(x=-0.18, color="#777777", linestyle="--", linewidth=1)
-    ax.axvline(x=0.18, color="#777777", linestyle="--", linewidth=1)
-    ax.axvline(x=0, color="#777777", linestyle="--", linewidth=0.8)
+    ax.axvline(x=-0.18, color="#777777", linestyle="-", linewidth=0.8)
+    ax.axvline(x=0.18, color="#777777", linestyle="-", linewidth=0.8)
+    ax.axvline(x=0, color="#777777", linestyle="-", linewidth=0.8)
     
     # --- 4. Layout (Axis and Spines) ---
     
@@ -129,11 +129,11 @@ def get_pacer_pitch_bins():
             "Slot": [2.5, 5.8],
             "Length": [5.8, 8],
             "Short": [8, 10],
-            "Bouncer": [10, 18]
+            "Bouncer": [10, 15]
     }
 def create_pacer_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
-    FIG_SIZE = (3, 4.5) 
+    FIG_SIZE = (2.5, 6) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -197,7 +197,7 @@ def create_pacer_pitch_length_bars(df_in):
         ax.set_xlim(xlim_limits[metric])
         
         # Horizontal Bar Chart
-        ax.barh(categories, values, height=0.49, color='#ff5000', zorder=3, alpha=0.9)
+        ax.barh(categories, values, height=0.6, color='#ff5000', zorder=3, alpha=1.0)
         
         # --- Annotations ---
         for j, (cat, val) in enumerate(zip(categories, values)):
@@ -423,6 +423,148 @@ def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and
 
     return fig
 
+# Chart 5 Bowler Release Map
+def create_pacer_release_analysis(df_in, handedness_label): 
+    FIG_SIZE = (3, 3) # Increased height for both charts
+
+    if df_in.empty or "ReleaseY" not in df_in.columns or "ReleaseZ" not in df_in.columns:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No data for Release Analysis vs. {handedness_label}", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # --- 1. Calculate Lateral Release Performance (LEFT vs RIGHT) ---
+    df_temp = df_in.copy()
+    
+    # Categorize based on ReleaseY sign
+    df_temp["ReleaseCategory"] = np.where(
+        df_temp["ReleaseY"] < 0, "LEFT (<0)", 
+        np.where(df_temp["ReleaseY"] > 0, "RIGHT (>0)", "CENTER (=0)")
+    )
+    
+    df_temp = df_temp[df_temp["ReleaseCategory"] != "CENTER (=0)"]
+    
+    # Calculation functions
+    def calculate_ba(row):
+        # Use np.nan as a flag for "N/A"
+        return row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else np.nan
+
+    def calculate_sr(row):
+        # Strike Rate = Balls per Wicket (normalized by 6 for Cricket SR)
+        return (row["Balls"] / row["Wickets"]) if row["Wickets"] > 0 else np.nan
+        
+    summary = df_temp.groupby("ReleaseCategory").agg(
+        Wickets=("Wicket", lambda x: (x == True).sum()),
+        Runs=("Runs", "sum"),
+        Balls=("Wicket", "count")
+    )
+
+    # Ensure both categories are present for consistent plotting
+    summary = summary.reindex(["LEFT (<0)", "RIGHT (>0)"]).fillna(0)
+    
+    summary["BA"] = summary.apply(calculate_ba, axis=1)
+    summary["SR"] = summary.apply(calculate_sr, axis=1)
+
+    # Formatting helper
+    def format_metric(value, is_wickets=False):
+        if is_wickets:
+            return f"{int(value)}"
+        if np.isnan(value) or value == np.inf:
+            return "N/A"
+        return f"{value:.1f}"
+
+    left = summary.loc["LEFT (<0)"]
+    right = summary.loc["RIGHT (>0)"]
+
+    # --- 2. Setup Figure and GridSpec ---
+    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.1)
+    
+    ax_map = fig.add_subplot(gs[0, 0])
+    ax_metrics = fig.add_subplot(gs[1, 0])
+
+    # --- 3. Plot Release Zone Map (ax_map) ---
+    
+    release_wickets = df_in[df_in["Wicket"] == True]
+    release_non_wickets = df_in[df_in["Wicket"] == False]
+    
+    # Non-Wickets (light grey)
+    ax_map.scatter(
+        release_non_wickets["ReleaseY"], release_non_wickets["ReleaseZ"], 
+        s=10, color='#D3D3D3', alpha=1.0, linewidths=0.5, label="No Wicket"
+    )
+
+    # Wickets (red)
+    ax_map.scatter(
+        release_wickets["ReleaseY"], release_wickets["ReleaseZ"], 
+        s=10, color='red', alpha=1.0, linewidths=1.0, label="Wicket", zorder=5
+    )
+    
+    # Add Stump Lines
+    stump_lines = [-0.18, 0, 0.18]
+    for y_val in stump_lines:
+        ax_map.axvline(x=y_val, color="#777777", linestyle="-", linewidth=0.5)
+    
+    # Formatting Map
+    ax_map.set_xlim(-1.5, 1.5)
+    ax_map.set_ylim(0.5, 2.5)
+    ax_map.set_xticks([])
+    ax_map.set_yticks([])
+    ax_map.set_facecolor('white')
+    ax_map.grid(True)
+
+    
+    # Hide all map spines
+    for spine in ax_map.spines.values():
+        spine.set_visible(False)
+        
+    # --- 4. Draw Lateral Metrics Table (ax_metrics) ---
+    
+    # Hide all metrics spines/ticks/labels
+    ax_metrics.axis('off')
+    ax_metrics.set_xlim(0, 1)
+    ax_metrics.set_ylim(-0.5, 1)
+
+    # Titles
+    # Metric Labels (Left Alignment for labels)
+    ax_metrics.text(0.05, 1, "W:", ha='right', va='center', fontsize=5, fontweight='bold')
+    ax_metrics.text(0.05, 0.5, "Avg:", ha='right', va='center', fontsize=5, fontweight='bold')
+    ax_metrics.text(0.05, 0, "SR:", ha='right', va='center', fontsize=5, fontweight='bold')
+
+    # LEFT Values
+    ax_metrics.text(0.2, 1, format_metric(left["Wickets"], is_wickets=True), ha='center', va='center', fontsize=8, color='red', fontweight='bold')
+    ax_metrics.text(0.2, 0.5, format_metric(left["BA"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
+    ax_metrics.text(0.2, 0, format_metric(left["SR"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
+
+    # RIGHT Values
+    ax_metrics.text(0.9, 1, format_metric(right["Wickets"], is_wickets=True), ha='center', va='center', fontsize=8, color='red', fontweight='bold')
+    ax_metrics.text(0.9, 0.5, format_metric(right["BA"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
+    ax_metrics.text(0.9, 0, format_metric(right["SR"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
+    
+    # --- 5. Add Sharp Border to Figure ---
+    plt.tight_layout(pad=0.1)
+    
+    # Create and add a custom Rectangle patch for sharp border
+    ax_bbox = ax_map.get_position()
+    # Calculate padding relative to figure size
+    padding_x = 0.001 * FIG_SIZE[0] / fig.get_size_inches()[0] 
+    padding_y = 0.001 * FIG_SIZE[1] / fig.get_size_inches()[1] 
+    
+    border_rect = patches.Rectangle(
+        (0.05, 0.13), 
+        0.9, 
+        0.8, 
+        facecolor='none',
+        edgecolor='black',
+        linewidth=0.5,
+        transform=fig.transFigure,
+        clip_on=False,
+        joinstyle='miter' # Ensures sharp corners
+    )
+    fig.add_artist(border_rect)
+
+    return fig
+
 # --- CHART 4: RELEASE SPEED DISTRIBUTION ---
 def create_pacer_release_speed_distribution(df_in, handedness_label):
     FIG_SIZE = (5, 4)
@@ -566,152 +708,10 @@ def create_pacer_release_speed_distribution(df_in, handedness_label):
 
     return fig
 
-# Chart 5 Bowler Release Map
-def create_pacer_release_analysis(df_in, handedness_label): 
-    FIG_SIZE = (3, 3) # Increased height for both charts
-
-    if df_in.empty or "ReleaseY" not in df_in.columns or "ReleaseZ" not in df_in.columns:
-        fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, f"No data for Release Analysis vs. {handedness_label}", ha='center', va='center', fontsize=12)
-        ax.axis('off')
-        return fig
-
-    # --- 1. Calculate Lateral Release Performance (LEFT vs RIGHT) ---
-    df_temp = df_in.copy()
-    
-    # Categorize based on ReleaseY sign
-    df_temp["ReleaseCategory"] = np.where(
-        df_temp["ReleaseY"] < 0, "LEFT (<0)", 
-        np.where(df_temp["ReleaseY"] > 0, "RIGHT (>0)", "CENTER (=0)")
-    )
-    
-    df_temp = df_temp[df_temp["ReleaseCategory"] != "CENTER (=0)"]
-    
-    # Calculation functions
-    def calculate_ba(row):
-        # Use np.nan as a flag for "N/A"
-        return row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else np.nan
-
-    def calculate_sr(row):
-        # Strike Rate = Balls per Wicket (normalized by 6 for Cricket SR)
-        return (row["Balls"] / row["Wickets"]) if row["Wickets"] > 0 else np.nan
-        
-    summary = df_temp.groupby("ReleaseCategory").agg(
-        Wickets=("Wicket", lambda x: (x == True).sum()),
-        Runs=("Runs", "sum"),
-        Balls=("Wicket", "count")
-    )
-
-    # Ensure both categories are present for consistent plotting
-    summary = summary.reindex(["LEFT (<0)", "RIGHT (>0)"]).fillna(0)
-    
-    summary["BA"] = summary.apply(calculate_ba, axis=1)
-    summary["SR"] = summary.apply(calculate_sr, axis=1)
-
-    # Formatting helper
-    def format_metric(value, is_wickets=False):
-        if is_wickets:
-            return f"{int(value)}"
-        if np.isnan(value) or value == np.inf:
-            return "N/A"
-        return f"{value:.1f}"
-
-    left = summary.loc["LEFT (<0)"]
-    right = summary.loc["RIGHT (>0)"]
-
-    # --- 2. Setup Figure and GridSpec ---
-    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.1)
-    
-    ax_map = fig.add_subplot(gs[0, 0])
-    ax_metrics = fig.add_subplot(gs[1, 0])
-
-    # --- 3. Plot Release Zone Map (ax_map) ---
-    
-    release_wickets = df_in[df_in["Wicket"] == True]
-    release_non_wickets = df_in[df_in["Wicket"] == False]
-    
-    # Non-Wickets (light grey)
-    ax_map.scatter(
-        release_non_wickets["ReleaseY"], release_non_wickets["ReleaseZ"], 
-        s=10, color='#D3D3D3', alpha=1.0, linewidths=0.5, label="No Wicket"
-    )
-
-    # Wickets (red)
-    ax_map.scatter(
-        release_wickets["ReleaseY"], release_wickets["ReleaseZ"], 
-        s=10, color='red', alpha=1.0, linewidths=1.0, label="Wicket", zorder=5
-    )
-    
-    # Add Stump Lines
-    stump_lines = [-0.18, 0, 0.18]
-    for y_val in stump_lines:
-        ax_map.axvline(x=y_val, color="#777777", linestyle="--", linewidth=0.5)
-    
-    # Formatting Map
-    ax_map.set_xlim(-1.5, 1.5)
-    ax_map.set_ylim(0.5, 2.5)
-    ax_map.set_xticks([])
-    ax_map.set_yticks([])
-    ax_map.set_facecolor('white')
-    ax_map.grid(True)
-
-    
-    # Hide all map spines
-    for spine in ax_map.spines.values():
-        spine.set_visible(False)
-        
-    # --- 4. Draw Lateral Metrics Table (ax_metrics) ---
-    
-    # Hide all metrics spines/ticks/labels
-    ax_metrics.axis('off')
-    ax_metrics.set_xlim(0, 1)
-    ax_metrics.set_ylim(-0.5, 1)
-
-    # Titles
-    # Metric Labels (Left Alignment for labels)
-    ax_metrics.text(0.05, 1, "W:", ha='right', va='center', fontsize=5, fontweight='bold')
-    ax_metrics.text(0.05, 0.5, "Avg:", ha='right', va='center', fontsize=5, fontweight='bold')
-    ax_metrics.text(0.05, 0, "SR:", ha='right', va='center', fontsize=5, fontweight='bold')
-
-    # LEFT Values
-    ax_metrics.text(0.2, 1, format_metric(left["Wickets"], is_wickets=True), ha='center', va='center', fontsize=8, color='red', fontweight='bold')
-    ax_metrics.text(0.2, 0.5, format_metric(left["BA"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
-    ax_metrics.text(0.2, 0, format_metric(left["SR"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
-
-    # RIGHT Values
-    ax_metrics.text(0.9, 1, format_metric(right["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='red', fontweight='bold')
-    ax_metrics.text(0.9, 0.5, format_metric(right["BA"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    ax_metrics.text(0.9, 0, format_metric(right["SR"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    
-    # --- 5. Add Sharp Border to Figure ---
-    plt.tight_layout(pad=0.1)
-    
-    # Create and add a custom Rectangle patch for sharp border
-    ax_bbox = ax_map.get_position()
-    # Calculate padding relative to figure size
-    padding_x = 0.001 * FIG_SIZE[0] / fig.get_size_inches()[0] 
-    padding_y = 0.001 * FIG_SIZE[1] / fig.get_size_inches()[1] 
-    
-    border_rect = patches.Rectangle(
-        (0.05, 0.13), 
-        0.9, 
-        0.8, 
-        facecolor='none',
-        edgecolor='black',
-        linewidth=0.5,
-        transform=fig.transFigure,
-        clip_on=False,
-        joinstyle='miter' # Ensures sharp corners
-    )
-    fig.add_artist(border_rect)
-
-    return fig
-
 # Chart 11: Speed Effectiveness
 def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     if df_in.empty:
-        fig, ax = plt.subplots(figsize=(5, 3))
+        fig, ax = plt.subplots(figsize=(6, 4))
         ax.text(0.5, 0.5, "No Data", ha='center', va='center')
         ax.axis('off')
         return fig
@@ -749,7 +749,7 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     plt.subplots_adjust(wspace=0.3) 
     
     y = np.arange(len(ordered_groups))
-    height = 0.2
+    height = 0.5
     color_pacer = '#ff5000'
 
     # --- Column 1: Boundary % ---
