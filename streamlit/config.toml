@@ -1,0 +1,16 @@
+[theme]
+# Base setting for a light theme
+base="light"
+
+# Main background color (White)
+backgroundColor="#000000"
+
+# Text color (Black for contrast)
+textColor="#FFFFFF"
+
+# Secondary background color (Sidebar background - Orange: #FF5000 is a common bright orange)
+secondaryBackgroundColor="#FF5000"
+
+[ui]
+# Set the desired width of the sidebar (150px)
+sidebarWidth="150px"
