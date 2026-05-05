@@ -37,7 +37,7 @@ def create_pacer_pitch_map(df_in):
     pitch_non_wickets = df_in[df_in["Wicket"] == False]
     
     # --- Chart Setup ---
-    fig, ax = plt.subplots(figsize=(5,10))
+    fig, ax = plt.subplots(figsize=(4.5,9))
     ax.set_facecolor('white')
     fig.patch.set_facecolor('white')
 
@@ -70,7 +70,7 @@ def create_pacer_pitch_map(df_in):
     # Non-Wickets (light grey)
     ax.scatter(
         pitch_non_wickets["BounceY"], pitch_non_wickets["BounceX"], 
-        s=70, 
+        s=100, 
         c='#D3D3D3', 
         edgecolor='white', 
         linewidths=1.0, 
@@ -81,7 +81,7 @@ def create_pacer_pitch_map(df_in):
     # Wickets (red)
     ax.scatter(
         pitch_wickets["BounceY"], pitch_wickets["BounceX"], 
-        s=100, 
+        s=150, 
         c='red', 
         edgecolor='white', 
         linewidths=1.0, 
@@ -133,7 +133,7 @@ def get_pacer_pitch_bins():
     }
 def create_pacer_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
-    FIG_SIZE = (5, 10) 
+    FIG_SIZE = (6, 9) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -197,7 +197,7 @@ def create_pacer_pitch_length_bars(df_in):
         ax.set_xlim(xlim_limits[metric])
         
         # Horizontal Bar Chart
-        ax.barh(categories, values, height=0.6, color='#ff5000', zorder=3, alpha=1.0)
+        ax.barh(categories, values, height=0.8, color='#ff5000', zorder=5, alpha=1.0)
         
         # --- Annotations ---
         for j, (cat, val) in enumerate(zip(categories, values)):
@@ -215,9 +215,9 @@ def create_pacer_pitch_length_bars(df_in):
                     zorder=4)
 
         # --- Formatting ---
-        ax.set_title(title, fontsize=10, fontweight='bold', pad=0, loc='left')
+        ax.set_title(title, fontsize=12, fontweight='bold', pad=0.5, loc='left')
         ax.set_facecolor('white')
-        ax.tick_params(axis='x', labelsize=8)
+        ax.tick_params(axis='x', labelsize=12)
         ax.tick_params(axis='y', length=0) 
 
         if i == 2:
