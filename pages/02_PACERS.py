@@ -14,192 +14,6 @@ import matplotlib.colors as mcolors
 from matplotlib.gridspec import GridSpec
 
 
-# =========================================================
-# Chart 1: CREASE BEEHIVE 
-# ========================================================
-def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and parameter
-    if df_in.empty:
-        fig, ax = plt.subplots(figsize=(7, 5)); 
-        ax.text(0.5, 0.5, f"No data for Analysis ({handedness_label})", ha='center', va='center', fontsize=12); 
-        ax.axis('off'); 
-        return fig
-
-    # --- Data Filtering ---
-    wickets = df_in[df_in["Wicket"] == True]
-    non_wickets_all = df_in[df_in["Wicket"] == False]
-    boundaries = non_wickets_all[(non_wickets_all["Runs"] == 4) | (non_wickets_all["Runs"] == 6)]
-    regular_balls = non_wickets_all[(non_wickets_all["Runs"] != 4) & (non_wickets_all["Runs"] != 6)]
-    
-    # --- Lateral Zone Data Prep (Chart 2b) ---
-    df_lateral = df_in.copy()
-    
-    # DETERMINE HANDEDNESS FOR ZONE REVERSAL
-    # If the function is called with a single handedness filter (RHB or LHB), this will be consistent.
-    is_rhb = handedness_label == "RHB" 
-
-    def assign_lateral_zone(row):
-        y = row["CreaseY"]
-        if row["IsBatsmanRightHanded"] == True:
-            # RHB: Off side is negative Y, Leg side is positive Y
-            if y > 0.18: return "LEG"
-            elif y >= -0.18: return "STUMPS"
-            elif y > -0.65: return "OUTSIDE OFF"
-            else: return "WAY OUTSIDE OFF"
-        else: # Left-Handed
-            # LHB: Leg side is negative Y, Off side is positive Y
-            if y > 0.65: return "WAY OUTSIDE OFF"
-            elif y > 0.18: return "OUTSIDE OFF"
-            elif y >= -0.18: return "STUMPS"
-            else: return "LEG"
-            
-    df_lateral["LateralZone"] = df_lateral.apply(assign_lateral_zone, axis=1)
-    
-    summary = (
-        df_lateral.groupby("LateralZone").agg(
-            Runs=("Runs", "sum"), Wickets=("Wicket", lambda x: (x == True).sum()), Balls=("Wicket", "count")
-        )
-    )
-    
-    # 1. Define standard zone order (WOO to LEG)
-    ordered_zones_base = ["WAY OUTSIDE OFF", "OUTSIDE OFF", "STUMPS", "LEG"]
-    
-    # 2. HANDEDNESS AWARE REVERSAL: Reverse order for LHB for visual consistency
-    ordered_zones = ordered_zones_base if is_rhb else ordered_zones_base[::-1]
-    
-    summary = summary.reindex(ordered_zones).fillna(0)
-    
-    # BOWLING AVERAGE CALCULATION (Same formula as before, just interpreted differently)
-    # summary["Avg Runs/Wicket"] = summary.apply(lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else np.nan, axis=1)
-    # Economy Calculation
-    summary["Economy"] = summary.apply(lambda row: (row["Runs"] / row["Balls"]) * 6 if row["Balls"] > 0 else np.nan, axis=1)
-
-    # -----------------------------------------------------------
-    # --- 1. SETUP SUBPLOTS ---
-    fig = plt.figure(figsize=(7, 5)) 
-    gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.005) 
-    ax_bh = fig.add_subplot(gs[0, 0])      
-    ax_boxes = fig.add_subplot(gs[1, 0])   
-    fig.patch.set_facecolor('white')
-    
-
-    # -----------------------------------------------------------
-    ## --- 2. CHART 2a: CREASE BEEHIVE (ax_bh) ---
-    
-    # --- Traces ---
-    ax_bh.scatter(regular_balls["CreaseY"], regular_balls["CreaseZ"], s=40, c='lightgrey', edgecolor='white', linewidths=1.0, alpha=0.95, label="Regular Ball")
-    ax_bh.scatter(boundaries["CreaseY"], boundaries["CreaseZ"], s=80, c='royalblue', edgecolor='white', linewidths=1.0, alpha=0.95, label="Boundary")
-    ax_bh.scatter(wickets["CreaseY"], wickets["CreaseZ"], s=80, c='red', edgecolor='white', linewidths=1.0, alpha=0.95, label="Wicket")
-
-    # --- Reference Lines ---
-    ax_bh.axvline(x=-0.18, color="grey", linestyle="--", linewidth=0.5) 
-    ax_bh.axvline(x=0.18, color="grey", linestyle="--", linewidth=0.5)
-    ax_bh.axvline(x=0, color="grey", linestyle="--", linewidth=0.5) 
-    ax_bh.axvline(x=-0.92, color="grey", linestyle="-", linewidth=0.5) 
-    ax_bh.axvline(x=0.92, color="grey", linestyle="-", linewidth=0.5)
-    ax_bh.axhline(y=0.78, color="grey", linestyle="-", linewidth=0.5)
-
-    # --- Annotation ---
-    ax_bh.text(-1.5, 0.78, "Stump line", ha='left', va='bottom', fontsize=8, color="grey", transform=ax_bh.transData)
-    
-    # --- Formatting ---
-    ax_bh.set_xlim([-2, 2])
-    ax_bh.set_ylim([0, 2])
-    ax_bh.set_aspect('equal', adjustable='box')
-    ax_bh.set_xticks([]); ax_bh.set_yticks([]); ax_bh.grid(False)
-    for spine in ax_bh.spines.values():
-        spine.set_visible(False)
-    ax_bh.set_facecolor('white')
-    
-    # -----------------------------------------------------------
-    ## --- 3. CHART 2b: LATERAL PERFORMANCE BOXES (ax_boxes) --
-    num_regions = len(ordered_zones)
-    box_width = 1 / num_regions
-    box_height = 0.4 
-    left = 0
-    
-    # Color Normalization
-    eco_values = summary["Economy"].dropna()
-    norm = mcolors.Normalize(vmin=3, vmax=9) 
-    cmap = cm.get_cmap('Wistia')
-
-    for index, row in summary.iterrows():
-        eco = row["Economy"]
-        wkts = int(row["Wickets"]) # Ensure wkts is defined here from the row
-        balls = int(row["Balls"])
-        
-        # Color based on Economy (handling NaN)
-        color = cmap(norm(eco)) if not np.isnan(eco) else (1, 1, 1, 1) # White if no balls bowled
-        
-        # Draw the Rectangle
-        ax_boxes.add_patch(
-            patches.Rectangle((left, 0), box_width, box_height, 
-                              edgecolor="black", facecolor=color, linewidth=0.4)
-        )
-        
-        # Label 1: Zone Name
-        ax_boxes.text(left + box_width / 2, box_height + 0.1, 
-                      index, ha='center', va='bottom', fontsize=7, color='black')
-        
-        # Contrast logic for text
-        text_color = 'black'
-        if balls > 0:
-            r, g, b, a = color
-            luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
-            text_color = 'white' if luminosity < 0.5 else 'black'
-        
-        # Label 2: Wickets and Economy (Replaces Average)
-        label_wkts_eco = f"{wkts}W - Eco {eco:.1f}" if not np.isnan(eco) else "No Data"
-        ax_boxes.text(left + box_width / 2, box_height * 0.5, 
-                      label_wkts_eco,
-                      ha='center', va='center', fontsize=9, fontweight='bold', color=text_color)
-        
-        left += box_width
-
-    # Formatting
-    ax_boxes.set_xlim(0, 1)
-    ax_boxes.set_ylim(0, box_height + 0.3) 
-    ax_boxes.axis('off')
-    for spine in ax_boxes.spines.values():
-        spine.set_visible(False)
-    ax_boxes.set_facecolor('white')
-
-    # -----------------------------------------------------------
-    ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
-    
-    plt.tight_layout(pad=0.2)
-    
-    PADDING = 0.008
-
-    bh_bbox = ax_bh.get_position()
-    box_bbox = ax_boxes.get_position()
-    
-    x0_orig = min(bh_bbox.x0, box_bbox.x0)
-    y0_orig = box_bbox.y0
-    x1_orig = max(bh_bbox.x1, box_bbox.x1)
-    y1_orig = bh_bbox.y1
-    
-    x0_pad = x0_orig - PADDING
-    y0_pad = y0_orig - PADDING
-    
-    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
-    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
-
-    border_rect = patches.Rectangle(
-        (x0_pad, y0_pad), 
-        width_pad, 
-        height_pad, 
-        facecolor='none', 
-        edgecolor='black', 
-        linewidth=0.5, 
-        transform=fig.transFigure, 
-        clip_on=False
-    )
-
-    fig.patches.append(border_rect)
-
-    return fig
-
-
 # --- CHART 3: PITCHMAP (BOUNCE LOCATION) ---
 def create_pacer_pitch_map(df_in): 
     PITCH_BINS = {
@@ -423,7 +237,192 @@ def create_pacer_pitch_length_bars(df_in):
             
     plt.tight_layout(pad=0.5)
     return fig
+
+# =========================================================
+# Chart 1: CREASE BEEHIVE 
+# ========================================================
+def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and parameter
+    if df_in.empty:
+        fig, ax = plt.subplots(figsize=(7, 5)); 
+        ax.text(0.5, 0.5, f"No data for Analysis ({handedness_label})", ha='center', va='center', fontsize=12); 
+        ax.axis('off'); 
+        return fig
+
+    # --- Data Filtering ---
+    wickets = df_in[df_in["Wicket"] == True]
+    non_wickets_all = df_in[df_in["Wicket"] == False]
+    boundaries = non_wickets_all[(non_wickets_all["Runs"] == 4) | (non_wickets_all["Runs"] == 6)]
+    regular_balls = non_wickets_all[(non_wickets_all["Runs"] != 4) & (non_wickets_all["Runs"] != 6)]
     
+    # --- Lateral Zone Data Prep (Chart 2b) ---
+    df_lateral = df_in.copy()
+    
+    # DETERMINE HANDEDNESS FOR ZONE REVERSAL
+    # If the function is called with a single handedness filter (RHB or LHB), this will be consistent.
+    is_rhb = handedness_label == "RHB" 
+
+    def assign_lateral_zone(row):
+        y = row["CreaseY"]
+        if row["IsBatsmanRightHanded"] == True:
+            # RHB: Off side is negative Y, Leg side is positive Y
+            if y > 0.18: return "LEG"
+            elif y >= -0.18: return "STUMPS"
+            elif y > -0.65: return "OUTSIDE OFF"
+            else: return "WAY OUTSIDE OFF"
+        else: # Left-Handed
+            # LHB: Leg side is negative Y, Off side is positive Y
+            if y > 0.65: return "WAY OUTSIDE OFF"
+            elif y > 0.18: return "OUTSIDE OFF"
+            elif y >= -0.18: return "STUMPS"
+            else: return "LEG"
+            
+    df_lateral["LateralZone"] = df_lateral.apply(assign_lateral_zone, axis=1)
+    
+    summary = (
+        df_lateral.groupby("LateralZone").agg(
+            Runs=("Runs", "sum"), Wickets=("Wicket", lambda x: (x == True).sum()), Balls=("Wicket", "count")
+        )
+    )
+    
+    # 1. Define standard zone order (WOO to LEG)
+    ordered_zones_base = ["WAY OUTSIDE OFF", "OUTSIDE OFF", "STUMPS", "LEG"]
+    
+    # 2. HANDEDNESS AWARE REVERSAL: Reverse order for LHB for visual consistency
+    ordered_zones = ordered_zones_base if is_rhb else ordered_zones_base[::-1]
+    
+    summary = summary.reindex(ordered_zones).fillna(0)
+    
+    # BOWLING AVERAGE CALCULATION (Same formula as before, just interpreted differently)
+    # summary["Avg Runs/Wicket"] = summary.apply(lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else np.nan, axis=1)
+    # Economy Calculation
+    summary["Economy"] = summary.apply(lambda row: (row["Runs"] / row["Balls"]) * 6 if row["Balls"] > 0 else np.nan, axis=1)
+
+    # -----------------------------------------------------------
+    # --- 1. SETUP SUBPLOTS ---
+    fig = plt.figure(figsize=(7, 5)) 
+    gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.005) 
+    ax_bh = fig.add_subplot(gs[0, 0])      
+    ax_boxes = fig.add_subplot(gs[1, 0])   
+    fig.patch.set_facecolor('white')
+    
+
+    # -----------------------------------------------------------
+    ## --- 2. CHART 2a: CREASE BEEHIVE (ax_bh) ---
+    
+    # --- Traces ---
+    ax_bh.scatter(regular_balls["CreaseY"], regular_balls["CreaseZ"], s=40, c='lightgrey', edgecolor='white', linewidths=1.0, alpha=0.95, label="Regular Ball")
+    ax_bh.scatter(boundaries["CreaseY"], boundaries["CreaseZ"], s=80, c='royalblue', edgecolor='white', linewidths=1.0, alpha=0.95, label="Boundary")
+    ax_bh.scatter(wickets["CreaseY"], wickets["CreaseZ"], s=80, c='red', edgecolor='white', linewidths=1.0, alpha=0.95, label="Wicket")
+
+    # --- Reference Lines ---
+    ax_bh.axvline(x=-0.18, color="grey", linestyle="--", linewidth=0.5) 
+    ax_bh.axvline(x=0.18, color="grey", linestyle="--", linewidth=0.5)
+    ax_bh.axvline(x=0, color="grey", linestyle="--", linewidth=0.5) 
+    ax_bh.axvline(x=-0.92, color="grey", linestyle="-", linewidth=0.5) 
+    ax_bh.axvline(x=0.92, color="grey", linestyle="-", linewidth=0.5)
+    ax_bh.axhline(y=0.78, color="grey", linestyle="-", linewidth=0.5)
+
+    # --- Annotation ---
+    ax_bh.text(-1.5, 0.78, "Stump line", ha='left', va='bottom', fontsize=8, color="grey", transform=ax_bh.transData)
+    
+    # --- Formatting ---
+    ax_bh.set_xlim([-2, 2])
+    ax_bh.set_ylim([0, 2])
+    ax_bh.set_aspect('equal', adjustable='box')
+    ax_bh.set_xticks([]); ax_bh.set_yticks([]); ax_bh.grid(False)
+    for spine in ax_bh.spines.values():
+        spine.set_visible(False)
+    ax_bh.set_facecolor('white')
+    
+    # -----------------------------------------------------------
+    ## --- 3. CHART 2b: LATERAL PERFORMANCE BOXES (ax_boxes) --
+    num_regions = len(ordered_zones)
+    box_width = 1 / num_regions
+    box_height = 0.4 
+    left = 0
+    
+    # Color Normalization
+    eco_values = summary["Economy"].dropna()
+    norm = mcolors.Normalize(vmin=3, vmax=9) 
+    cmap = cm.get_cmap('Wistia')
+
+    for index, row in summary.iterrows():
+        eco = row["Economy"]
+        wkts = int(row["Wickets"]) # Ensure wkts is defined here from the row
+        balls = int(row["Balls"])
+        
+        # Color based on Economy (handling NaN)
+        color = cmap(norm(eco)) if not np.isnan(eco) else (1, 1, 1, 1) # White if no balls bowled
+        
+        # Draw the Rectangle
+        ax_boxes.add_patch(
+            patches.Rectangle((left, 0), box_width, box_height, 
+                              edgecolor="black", facecolor=color, linewidth=0.4)
+        )
+        
+        # Label 1: Zone Name
+        ax_boxes.text(left + box_width / 2, box_height + 0.1, 
+                      index, ha='center', va='bottom', fontsize=7, color='black')
+        
+        # Contrast logic for text
+        text_color = 'black'
+        if balls > 0:
+            r, g, b, a = color
+            luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            text_color = 'white' if luminosity < 0.5 else 'black'
+        
+        # Label 2: Wickets and Economy (Replaces Average)
+        label_wkts_eco = f"{wkts}W - Eco {eco:.1f}" if not np.isnan(eco) else "No Data"
+        ax_boxes.text(left + box_width / 2, box_height * 0.5, 
+                      label_wkts_eco,
+                      ha='center', va='center', fontsize=9, fontweight='bold', color=text_color)
+        
+        left += box_width
+
+    # Formatting
+    ax_boxes.set_xlim(0, 1)
+    ax_boxes.set_ylim(0, box_height + 0.3) 
+    ax_boxes.axis('off')
+    for spine in ax_boxes.spines.values():
+        spine.set_visible(False)
+    ax_boxes.set_facecolor('white')
+
+    # -----------------------------------------------------------
+    ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
+    
+    plt.tight_layout(pad=0.2)
+    
+    PADDING = 0.008
+
+    bh_bbox = ax_bh.get_position()
+    box_bbox = ax_boxes.get_position()
+    
+    x0_orig = min(bh_bbox.x0, box_bbox.x0)
+    y0_orig = box_bbox.y0
+    x1_orig = max(bh_bbox.x1, box_bbox.x1)
+    y1_orig = bh_bbox.y1
+    
+    x0_pad = x0_orig - PADDING
+    y0_pad = y0_orig - PADDING
+    
+    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
+    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
+
+    border_rect = patches.Rectangle(
+        (x0_pad, y0_pad), 
+        width_pad, 
+        height_pad, 
+        facecolor='none', 
+        edgecolor='black', 
+        linewidth=0.5, 
+        transform=fig.transFigure, 
+        clip_on=False
+    )
+
+    fig.patches.append(border_rect)
+
+    return fig
+
 # --- CHART 4: RELEASE SPEED DISTRIBUTION ---
 def create_pacer_release_speed_distribution(df_in, handedness_label):
     FIG_SIZE = (4, 4.4)
