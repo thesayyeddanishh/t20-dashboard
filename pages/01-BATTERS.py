@@ -774,7 +774,7 @@ def calculate_scoring_angle(area):
 # --- Main Combined Function (Chart 6) ---
 def create_wagon_wheel(df_in, delivery_type):
     FIG_WIDTH = 11
-    FIG_HEIGHT = 5
+    FIG_HEIGHT = 12
     FIG_SIZE = (FIG_WIDTH, FIG_HEIGHT)
 
     if df_in.empty:
@@ -931,47 +931,53 @@ def create_speed_metrics_bar(df_in, delivery_type):
     # Finally, fill any remaining NaNs (0/0 cases) with 0
     summary["Avg"] = summary["Avg"].fillna(0)
 
-    # 4. Plotting - Changed to 1 row, 4 columns
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(12, 4), sharey=True)
-    plt.subplots_adjust(wspace=0.8) 
+    # 4. Plotting - Wide figure (16) and taller (5) to give text room
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(16, 5), sharey=True)
+    
+    # Increase horizontal space between the four charts
+    plt.subplots_adjust(wspace=0.4) 
     
     y = np.arange(len(ordered_groups))
-    height = 0.6
+    height = 0.7  # Thicker bars look better for labels
 
-    # --- Column 1: Runs ---
-    ax1.barh(y, summary["Runs"], color='#ff5000', edgecolor='black', height=height)
-    ax1.set_title("Runs", fontsize=12, fontweight='bold')
+    # List of metrics and titles to loop through for consistency
+    metrics = ["Runs", "Dismissals", "Avg", "SR"]
+    titles = ["Runs", "Outs", "Avg", "SR"]
+    axes = [ax1, ax2, ax3, ax4]
+
+    for ax, metric, title in zip(axes, metrics, titles):
+        vals = summary[metric]
+        bars = ax.barh(y, vals, color='#ff5000', edgecolor='black', height=height)
+        ax.set_title(title, fontsize=16, fontweight='bold', pad=15)
+        
+        # Add labels INSIDE or at the END of bars based on size
+        for bar in bars:
+            width = bar.get_width()
+            label_x_pos = width / 2 if width > 20 else width + 2  # Center if bar is wide enough
+            label_color = 'white' if width > 20 else 'black'
+            
+            ax.text(
+                label_x_pos, 
+                bar.get_y() + bar.get_height()/2,
+                f'{width:.0f}' if metric != "Avg" else f'{width:.1f}',
+                va='center', 
+                ha='center' if width > 20 else 'left',
+                fontweight='bold', 
+                fontsize=14,
+                color=label_color
+            )
+
+    # Clean up formatting for all axes
     ax1.set_yticks(y)
-    ax1.set_yticklabels(ordered_groups, fontsize=11, fontweight='bold')
-    for i, v in enumerate(summary["Runs"]):
-        ax1.text(v + 1, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=10)
-
-    # --- Column 2: Dismissals ---
-    ax2.barh(y, summary["Dismissals"], color='#ff5000', edgecolor='black', height=height)
-    ax2.set_title("Outs", fontsize=12, fontweight='bold')
-    for i, v in enumerate(summary["Dismissals"]):
-        ax2.text(v + 0.1, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=10)
-
-    # --- Column 3: Average ---
-    ax3.barh(y, summary["Avg"], color='#ff5000', edgecolor='black', height=height)
-    ax3.set_title("Avg", fontsize=12, fontweight='bold')
-    for i, v in enumerate(summary["Avg"]):
-        ax3.text(v + 1, i, f'{v:.1f}', va='center', fontweight='bold', fontsize=10)
-
-    # --- Column 4: Strike Rate ---
-    ax4.barh(y, summary["SR"], color='#ff5000', edgecolor='black', height=height)
-    ax4.set_title("SR", fontsize=12, fontweight='bold')
-    for i, v in enumerate(summary["SR"]):
-        ax4.text(v + 3, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=10)
-
-    # Formatting Cleanup
-    for ax in [ax1, ax2, ax3, ax4]:
+    ax1.set_yticklabels(ordered_groups, fontsize=14, fontweight='bold')
+    
+    for ax in axes:
         ax.spines[['top', 'right', 'bottom']].set_visible(False)
         ax.xaxis.set_visible(False)
         ax.invert_yaxis() 
 
     return fig
-
+    
 # PAG LAYOUT SETUP
 
 st.set_page_config(
