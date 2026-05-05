@@ -774,7 +774,7 @@ def calculate_scoring_angle(area):
 # --- Main Combined Function (Chart 6) ---
 def create_wagon_wheel(df_in, delivery_type):
     FIG_WIDTH = 11.0
-    FIG_HEIGHT = 16 
+    FIG_HEIGHT = 8
     FIG_SIZE = (FIG_WIDTH, FIG_HEIGHT)
 
     if df_in.empty:
