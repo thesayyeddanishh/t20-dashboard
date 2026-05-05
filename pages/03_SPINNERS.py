@@ -209,13 +209,13 @@ def create_Spinner_pitch_length_bars(df_in):
         
         # --- DYNAMIC TITLES ---
         if metric == "SR":
-            title = "Balls" if df_summary["Wickets"].sum() == 0 else "Bowling Strike Rate (SR)"[cite: 1]
+            title = "Balls" if df_summary["Wickets"].sum() == 0 else "Bowling Strike Rate (SR)"
         elif metric == "Avg":
-            title = "Runs" if df_summary["Wickets"].sum() == 0 else "Bowling Average (Avg)"[cite: 1]
+            title = "Runs" if df_summary["Wickets"].sum() == 0 else "Bowling Average (Avg)"
         else:
             title = "Economy"
             
-        ax.set_title(title, fontsize=12, fontweight='bold', pad=0, loc='left')[cite: 1]
+        ax.set_title(title, fontsize=12, fontweight='bold', pad=0, loc='left')
         
         # --- DYNAMIC ANNOTATIONS (The R and B Trick) ---
         for j, (idx, row) in enumerate(df_rev.iterrows()):
@@ -226,10 +226,10 @@ def create_Spinner_pitch_length_bars(df_in):
                 label = f"{val:.1f}"
             elif metric == "SR":
                 # If no wickets, show total Balls + B
-                label = f"{int(row['Balls'])} B" if wickets == 0 else f"{val:.1f}"[cite: 1]
+                label = f"{int(row['Balls'])} B" if wickets == 0 else f"{val:.1f}"
             elif metric == "Avg":
                 # If no wickets, show total Runs + R
-                label = f"{int(row['Runs'])} R" if wickets == 0 else f"{val:.1f}"[cite: 1]
+                label = f"{int(row['Runs'])} R" if wickets == 0 else f"{val:.1f}"
             
             ax.text(val, j, label, 
                     ha='left', va='center', 
