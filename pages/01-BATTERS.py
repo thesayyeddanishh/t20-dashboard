@@ -419,7 +419,7 @@ def create_pitch_Length_bars(df_in, delivery_type):
     lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else 0, axis=1
     )
 
-    # Boundary % with just the Total Runs value
+    # Total Runs
     df_summary["TotalRuns"] = df_summary["Runs"]
     
     # Categories for plotting (reversed for barh)
@@ -437,9 +437,9 @@ def create_pitch_Length_bars(df_in, delivery_type):
     colors = ['#ff5000', '#ff5000', '#ff5000']
                                 
     # Define limits for each chart to ensure proper scaling
-    max_sr = df_summary["StrikeRate"].max() * 1.1 if df_summary["StrikeRate"].max() > 0 else 300
-    max_avg = df_summary["Average"].max() * 1.1 if df_summary["Average"].max() > 0 else 100
-    max_runs = df_summary["Runs"].max() * 1.1 if df_summary["Runs"].max() > 0 else 100
+    max_sr = df_summary["StrikeRate"].max() * 1.2 if df_summary["StrikeRate"].max() > 0 else 300
+    max_avg = df_summary["Average"].max() * 1.2 if df_summary["Average"].max() > 0 else 100
+    max_runs = df_summary["Runs"].max() * 1.2 if df_summary["Runs"].max() > 0 else 100
 
     xlim_limits = {
         "Average": (0, max_avg),
@@ -467,7 +467,7 @@ def create_pitch_Length_bars(df_in, delivery_type):
             if metric == "Wickets":
                 label = f"{int(val)}"
             else:
-                label = f"{val:.2f}"
+                label = f"{val:.0f}"
             
             # Place label slightly to the right of the bar tip
             ax.text(val, j, label, 
@@ -617,96 +617,103 @@ def create_interception_side_on(df_in, delivery_type):
     ## --- PART 2: CHART 4b - CREASE WIDTH SPLIT BARS (ax_bar) ---
     # ----------------------------------------------------------------------
     
-    # 1. Data Preparation
-    INTERCEPTION_BINS = get_interception_bins()
-    ordered_keys = ["0m-1m", "1m-2m", "2m-3m", "3m+"]  # Order: Close to Wide
-    COLORMAP = 'Wistia'
-    
-    def assign_crease_width(x):
-        for width, bounds in INTERCEPTION_BINS.items():
-            if bounds[0] <= x < bounds[1]: return width
-        return None
+    # --- 1. Data Preparation ---
+INTERCEPTION_BINS = get_interception_bins()
+ordered_keys = ["0m-1m", "1m-2m", "2m-3m", "3m+"]  # Order: Close to Wide
+COLORMAP = 'Wistia'
 
-    df_crease = df_in.copy()
-    df_crease["CreaseWidth"] = (df_crease["InterceptionX"] + 10).apply(assign_crease_width)
+def assign_crease_width(x):
+    for width, bounds in INTERCEPTION_BINS.items():
+        if bounds[0] <= x < bounds[1]: return width
+    return None
+
+df_crease = df_in.copy()
+df_crease["CreaseWidth"] = (df_crease["InterceptionX"] + 10).apply(assign_crease_width)
+
+df_summary = df_crease.groupby("CreaseWidth").agg(
+    Runs=("Runs", "sum"), 
+    Wickets=("Wicket", lambda x: (x == True).sum()), 
+    Balls=("Wicket", "count")
+).reset_index().set_index("CreaseWidth").reindex(ordered_keys).fillna(0)
+
+# Calculate Strike Rate (SR) and Average (Avg)
+df_summary["SR"] = df_summary.apply(
+    lambda row: (row["Runs"] / row["Balls"]) * 100 if row["Balls"] > 0 else 0, axis=1
+)
+
+# Calculate Average (Avg)
+df_summary["Avg"] = df_summary.apply(
+    lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else row["Runs"], axis=1
+)
+
+# --- 2. Plotting Equal Boxes ---
+num_boxes = len(ordered_keys)
+box_width = 1.0 / num_boxes 
+left = 0.0
+box_height = 0.6 # Original height
+
+max_sr_val = df_summary["SR"].replace([np.inf, -np.inf], np.nan).max()
+max_sr = max_sr_val if max_sr_val > 0 else 200 
+
+norm = mcolors.Normalize(vmin=0, vmax=max_sr)
+cmap = cm.get_cmap(COLORMAP)
+
+for index, row in df_summary.iterrows():
+    runs = int(row["Runs"])
+    wickets = int(row["Wickets"])
+    sr = row["SR"]
+    avg = row["Avg"]
     
-    df_summary = df_crease.groupby("CreaseWidth").agg(
-        Runs=("Runs", "sum"), 
-        Wickets=("Wicket", lambda x: (x == True).sum()), 
-        Balls=("Wicket", "count")
-    ).reset_index().set_index("CreaseWidth").reindex(ordered_keys).fillna(0)
-    
-    # NEW: Calculate Strike Rate (SR) instead of Average
-    df_summary["SR"] = df_summary.apply(
-        lambda row: (row["Runs"] / row["Balls"]) * 100 if row["Balls"] > 0 else np.nan, axis=1
+    if sr == 0:
+        sr_display = '0'
+        avg_display = '0.0'
+        color = 'white'
+        text_color = 'black'
+    else:
+        sr_display = f"{sr:.0f}"
+        avg_display = f"{avg:.0f}"
+        color = cmap(norm(sr)) 
+        
+        # Contrast logic for text
+        r, g, b, a = color
+        luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        text_color = 'white' if luminosity < 0.5 else 'black'
+        
+    # Draw the box  
+    ax_bar.barh(
+        y=0.5,             
+        width=box_width,
+        height=box_height,          
+        left=left,         
+        color=color,
+        edgecolor='black',
+        linewidth=0.4
     )
     
-    # 2. Plotting Equal Boxes
-    num_boxes = len(ordered_keys)
-    box_width = 1.0 / num_boxes 
-    left = 0.0
-
-    # Normalization changed to Strike Rate
-    max_sr_val = df_summary["SR"].replace([np.inf, -np.inf], np.nan).max()
-    max_sr = max_sr_val if max_sr_val > 0 else 200 # Default max for scaling
+    # --- UPDATED TEXT: Multi-line Format ---
+    # Line 1: Runs and Wickets
+    label_top = f"{Runs} Runs, {W}W"
+    # Line 2: Avg and SR
+    label_bottom = f"{avg_display} Avg, {sr_display} SR"
     
-    norm = mcolors.Normalize(vmin=0, vmax=max_sr)
-    cmap = cm.get_cmap(COLORMAP)
+    center_x = left + box_width / 2
     
-    for index, row in df_summary.iterrows():
-        wickets = row["Wickets"]
-        sr = row["SR"] 
-        
-        # --- CONDITIONAL STYLING LOGIC ---
-        if np.isnan(sr) or sr == np.inf:
-            sr_display = '0'
-            color = 'white'
-            text_color = 'black'
-        else:
-            sr_display = f"{sr:.0f}"
-            color = cmap(norm(sr)) 
-            
-            # Contrast logic for text
-            r, g, b, a = color
-            luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
-            text_color = 'white' if luminosity < 0.5 else 'black'
-            
-        # Draw the box  
-        ax_bar.barh(
-            y=0.5,             
-            width=box_width,
-            height=0.6,          
-            left=left,         
-            color=color,
-            edgecolor='black',
-            linewidth=0.4
-        )
-        
-        # --- UPDATED TEXT: Wickets and Strike Rate ---
-        label_text = f"{int(wickets)}W - SR {sr_display}"
-        
-        center_x = left + box_width / 2
-        center_y = 0.5
-        
-        ax_bar.text(
-            center_x, center_y, 
-            label_text,
-            ha='center', va='center', 
-            fontsize=9, 
-            fontweight = 'bold',
-            color=text_color
-        )
-        
-        # Crease Width Label (Top of the box)
-        ax_bar.text(center_x, 0.8, index, ha='center', va='bottom', fontsize=9, color='black')
+    # Position Line 1 (Upper half of the colored box)
+    ax_bar.text(center_x, 0.62, label_top, ha='center', va='center', 
+                fontsize=8, fontweight='bold', color=text_color)
+    
+    # Position Line 2 (Lower half of the colored box)
+    ax_bar.text(center_x, 0.38, label_bottom, ha='center', va='center', 
+                fontsize=8, fontweight='bold', color=text_color)
+    
+    # Crease Width Label (Top of the box)
+    ax_bar.text(center_x, 0.82, index, ha='center', va='bottom', fontsize=9, color='black')
 
-        left += box_width
+    left += box_width
 
-    # 3. Styling for Bar Chart
-    ax_bar.set_xlim(0, 1)
-    ax_bar.set_ylim(0, 1) 
-    ax_bar.axis('off')
-
+ax_bar.set_xlim(0, 1)
+ax_bar.set_ylim(0, 1) 
+ax_bar.axis('off')
 
     # ----------------------------------------------------------------------
     ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
