@@ -1049,7 +1049,6 @@ with col_rhb:
     st.pyplot(create_pacer_speed_effectiveness_3col(df_rhb, "RHB"), use_container_width=True)
     
     # Chart 17: Scoring Areas
-    with wagon_rhb:
         st.markdown("###### SCORING AREAS of RHB ")
         st.pyplot(create_pacer_death_wagon_wheel(df_rhb), use_container_width=True)
 
@@ -1087,6 +1086,5 @@ with col_lhb:
     st.pyplot(create_pacer_speed_effectiveness_3col(df_lhb, "LHB"), use_container_width=True)
     
     # Chart 17: Scoring Areas
-    with wagon_lhb:
         st.markdown("###### SCORING AREAS of LHB ")
         st.pyplot(create_pacer_death_wagon_wheel(df_lhb), use_container_width=True)
