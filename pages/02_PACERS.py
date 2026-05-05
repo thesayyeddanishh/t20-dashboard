@@ -199,175 +199,16 @@ def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and
 
     return fig
 
-# --- CHART 2: ZONAL ANALYSIS (CBH Boxes) ---
-def create_pacer_zonal_analysis(df_in, handedness_label):
-    if df_in.empty:
-        # Assuming plt is imported
-        fig, ax = plt.subplots(figsize=(3, 2)); ax.text(0.5, 0.5, f"No Data ({handedness_label})", ha='center', va='center'); ax.axis('off'); return fig
-
-    # 1. Handedness Determination and Zone Layout
-    is_right_handed_batsman = (handedness_label == "RHB")
-    
-    # RHB Zones: Off side (negative Y) to Leg side (positive Y)
-    # Y-axis (lateral): -0.72 (Wide Off) to 0.72 (Wide Leg)
-    # Z-axis (height): 0 (Stump Base) to 1.91 (Above Head)
-    right_hand_zones = { "Z1": (-0.72, 0, -0.45, 1.91), "Z2": (-0.45, 0, -0.18, 0.71), "Z3": (-0.18, 0, 0.18, 0.71), "Z4": (-0.45, 0.71, -0.18, 1.31), "Z5": (-0.18, 0.71, 0.18, 1.31), "Z6": (-0.18, 1.31, 0.18, 1.91)}
-    
-    # LHB Zones: Leg side (negative Y) to Off side (positive Y)
-    left_hand_zones = { "Z1": (0.45, 0, 0.72, 1.91), "Z2": (0.18, 0, 0.45, 0.71), "Z3": (-0.18, 0, 0.18, 0.71), "Z4": (0.18, 0.71, 0.45, 1.31), "Z5": (-0.18, 0.71, 0.18, 1.31), "Z6": (-0.18, 1.31, 0.18, 1.91)}
-    
-    zones_layout = right_hand_zones if is_right_handed_batsman else left_hand_zones
-        
-    def assign_zone(row):
-        x, y = row["CreaseY"], row["CreaseZ"]
-        for zone, (x1, y1, x2, y2) in zones_layout.items():
-            if x1 <= x <= x2 and y1 <= y <= y2: return zone
-        return "Other"
-
-    df_chart2 = df_in.copy(); 
-    df_chart2["Zone"] = df_chart2.apply(assign_zone, axis=1)
-    df_chart2 = df_chart2[df_chart2["Zone"] != "Other"]
-        
-    # 2. Calculate Summary Metrics (Bowler Focus)
-    summary = (
-        df_chart2.groupby("Zone").agg(
-            Runs=("Runs", "sum"), 
-            Wickets=("Wicket", lambda x: (x == True).sum()), 
-            Balls=("Wicket", "count"),
-            Dots=("Runs", lambda x: (x == 0).sum()),
-            Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum())
-        )
-        .reindex([f"Z{i}" for i in range(1, 7)]).fillna(0)
-    )
-    
-    # Bowling Average (Runs / Wickets)
-    # summary["Avg Runs/Wicket"] = summary.apply(lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else np.nan, axis=1)
-    # # Bowling Strike Rate (Balls / Wickets)
-    # summary["BowlingSR"] = summary.apply(lambda row: row["Balls"] / row["Wickets"] if row["Wickets"] > 0 else np.nan, axis=1)
-
-    # White Ball Metrics
-    summary["Eco"] = summary.apply(lambda row: (row["Runs"] / row["Balls"] * 6) if row["Balls"] > 0 else 0.0, axis=1)
-    summary["Dot%"] = summary.apply(lambda row: (row["Dots"] / row["Balls"] * 100) if row["Balls"] > 0 else 0.0, axis=1)
-    summary["Bnd%"] = summary.apply(lambda row: (row["Boundaries"] / row["Balls"] * 100) if row["Balls"] > 0 else 0.0, axis=1)
-
-    # 3. Color Scaling (Based on Dynamic Economy Rate)
-    # We use 'RdYlGn_r' (Red-Yellow-Green Reversed) so low ER is Green and high ER is Red
-    eco_values = summary[summary["Balls"] > 0]["Eco"]
-    
-    if not eco_values.empty:
-        vmin = 3
-        vmax = 9
-        # Ensure there is a range to avoid division by zero errors in Normalize
-        if vmin == vmax: vmax += 1
-    else:
-        vmin, vmax = 0, 10
-
-    norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
-    cmap = cm.get_cmap('Wistia_r')
-
-    # Assuming plt and patches are imported
-    fig_boxes, ax = plt.subplots(figsize=(3,2), subplot_kw={'xticks': [], 'yticks': []}) 
-        
-    # 4. Plotting Zones and Labels
-    for zone, (x1, y1, x2, y2) in zones_layout.items():
-        w, h = x2 - x1, y2 - y1
-        z_key = zone.replace("Zone ", "Z")
-            
-        runs, wkts, bowling_avg, bowling_sr = (0, 0, 0, 0)
-        
-        if z_key in summary.index:
-            row = summary.loc[z_key]
-            eco = row["Eco"]
-            wkts = int(row["Wickets"])
-            dot_p = row["Dot%"]
-            bnd_p = row["Bnd%"]
-            balls = row["Balls"]
-            
-        color = cmap(norm(eco)) if balls > 0 else "white"
-
-        ax.add_patch(patches.Rectangle((x1, y1), w, h, edgecolor="black", facecolor=color, linewidth=0.8))
-        
-        # Calculate text color for contrast
-        text_color = "black"
-        if balls > 0:
-            r, g, b, a = color
-            luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
-            text_color = 'white' if luminosity < 0.4 else 'black'
-
-        # Updated Label for White Ball
-        label = (f"Eco: {eco:.1f}\n"
-                 f"W: {wkts}\n"
-                 f"Dot%: {dot_p:.0f}\n"
-                 f"Bd%: {bnd_p:.0f}")
-        ax.text(x1 + w / 2, y1 + h / 2, label, 
-                ha="center", va="center", fontsize=4.5, # Slightly smaller font to fit 4 metrics
-                color=text_color, fontweight='bold', linespacing=1.3)    
-        
-    ax.set_xlim(-0.75, 0.75); ax.set_ylim(0, 2); ax.axis('off'); 
-    plt.tight_layout(pad=0.1)
-    bbox = ax.get_position()
-    LINE_THICKNESS = 0.3
-    
-    # 2. DEFINE CUSTOM PADDING FOR EACH SIDE (in figure coordinates, e.g., 0.01 = 1% of figure dimension)
-    # Adjust these values to shift the border relative to the plot content:
-    custom_padding = {
-        'left': 0.0002,   # Increase for wider gap on the left
-        'bottom': 0.03, # Decrease for tighter gap on the bottom
-        'right': 0.0002,  # Increase for wider gap on the right
-        'top': 0.00001     # Decrease for tighter gap on the top
-    }
-    
-    # 3. CALCULATE NEW RECTANGLE POSITION AND SIZE
-    
-    # New X start position (original X start minus left padding)
-    x_start = bbox.x0 - custom_padding['left']
-    
-    # New Y start position (original Y start minus bottom padding)
-    y_start = bbox.y0 - custom_padding['bottom']
-    
-    # New Width (original width + left padding + right padding)
-    new_width = (bbox.x1 - bbox.x0) + custom_padding['left'] + custom_padding['right']
-    
-    # New Height (original height + bottom padding + top padding)
-    new_height = (bbox.y1 - bbox.y0) + custom_padding['bottom'] + custom_padding['top']
-    
-    # Create the border rectangle
-    border_rect = patches.Rectangle(
-        (x_start, y_start), 
-        new_width, 
-        new_height, 
-        facecolor='none', 
-        edgecolor='black', 
-        linewidth=LINE_THICKNESS, 
-        transform=fig_boxes.transFigure, 
-        clip_on=False
-    )
-    
-    # Add the border to the figure
-    fig_boxes.patches.append(border_rect)
-    
-    return fig_boxes
-    return fig_boxes
-
-# --- Helper function for Pitch Bins (Centralized) ---
-def get_pitch_bins():
-    """Defines the pitch length ranges for Seam bowling."""
-    # Seam Bins: 1.2-6: Full, 6-8 Length, 8-10 Short, 10-15 Bouncer (Distance from batsman's stumps in meters)
-    return {
-        "Over Pitched": [1.22, 2.22],
-        "Full": [2.22, 4.0],
-        "Good": [4.0, 6.0],
-        "Short": [6.0, 15.0],
-    }
 
 # --- CHART 3: PITCHMAP (BOUNCE LOCATION) ---
 def create_pacer_pitch_map(df_in): 
     PITCH_BINS = {
-           "Full Toss": [-2, 0.9],
-            "Yorker": [0.9,2.8],
-            "Slot": [2.8, 5.9],
-            "Length": [5.9, 8.6],
-            "Short": [8.6, 15]
+           "Full Toss": [-5, 0.5],
+            "Yorker": [0.5,2.5],
+            "Slot": [2.5, 5.8],
+            "Length": [5.8, 8],
+            "Short": [8, 10],
+            "Bouncer": [10, 18]
     }
 
     if df_in.empty:
@@ -469,11 +310,12 @@ def create_pacer_pitch_map(df_in):
 # --- Helper function for Pitch Bins (Hardcoded for Seam) ---
 def get_pacer_pitch_bins():
     return {
-           "Full Toss": [-2, 0.9],
-            "Yorker": [0.9,2.8],
-            "Slot": [2.8, 5.9],
-            "Length": [5.9, 8.6],
-            "Short": [8.6, 15]
+           "Full Toss": [-5, 0.5],
+            "Yorker": [0.5,2.5],
+            "Slot": [2.5, 5.8],
+            "Length": [5.8, 8],
+            "Short": [8, 10],
+            "Bouncer": [10, 18]
     }
 def create_pacer_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
@@ -867,329 +709,6 @@ def create_pacer_release_analysis(df_in, handedness_label):
 
     return fig
 
-# Chart 8: Swing Distribution
-def create_swing_distribution_histogram(df_in, handedness_label):
-    FIG_SIZE = (5, 4) 
-
-    # 0. Initial Check and Data Preparation
-    if df_in.empty or "Swing" not in df_in.columns:
-        fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, f"No Swing data for ({handedness_label})", ha='center', va='center', fontsize=12)
-        ax.axis('off')
-        return fig
-
-    df_data = df_in["Swing"].dropna().astype(float)
-    df_data = df_data[(df_data>=-10) & (df_data <= 10)]
-
-    if df_data.empty:
-        fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, f"No valid Swing data for ({handedness_label})", ha='center', va='center', fontsize=12)
-        ax.axis('off')
-        return fig
-
-    # --- 1. Histogram Data Preparation (Top Chart) ---
-    min_Swing = np.floor(df_data.min())
-    max_Swing = np.ceil(df_data.max())
-    bins = np.arange(min_Swing, max_Swing + 1.1, 1) 
-    
-    counts, _ = np.histogram(df_data, bins=bins)
-    total_balls = len(df_data)
-    percentages = (counts / total_balls) * 100
-    lower_bin_edges = bins[:-1] 
-    bar_centers = (bins[:-1] + bins[1:]) / 2
-    bar_width = 0.9 
-
-    # --- 2. Directional Split Data Preparation & Coloring (Bottom Chart) ---
-    
-    # Logic: < 0 is LEFT, >= 0 is RIGHT (to match the example image logic)
-    left_count = (df_data < 0).sum()
-    right_count = (df_data >= 0).sum()
-    
-    total_split = left_count + right_count
-    
-    if total_split > 0:
-        left_pct = (left_count / total_split) * 100
-        right_pct = (right_count / total_split) * 100
-    else:
-        left_pct, right_pct = 0, 0
-        
-    # Dynamic Color Assignment: Darker shade for the larger percentage
-    DARK_SHADE = '#ff5000'  # Primary, darker red
-    LIGHT_SHADE = '#FDD0A2' # Secondary, lighter orange
-
-    if left_pct >= right_pct:
-        left_bar_color = DARK_SHADE
-        right_bar_color = LIGHT_SHADE
-    else:
-        left_bar_color = LIGHT_SHADE
-        right_bar_color = DARK_SHADE
-
-    # --- 3. Matplotlib Setup and GridSpec ---
-    # Adjusted height ratio and HSPACE for tighter layout
-    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.3)
-    
-    ax_hist = fig.add_subplot(gs[0, 0])
-    ax_split = fig.add_subplot(gs[1, 0])
-
-    # --- 4. Plot Histogram (ax_hist) ---
-    rects = ax_hist.bar(bar_centers, percentages, width=bar_width, color='#ff5000', linewidth=1.0)
-    
-    # ax_hist.set_title(...) --- REMOVED TITLE per user request ---
-    
-    # Annotation (Percentages on top of bars)
-    for rect, pct in zip(rects, percentages):
-        if pct > 0.5: 
-            height = rect.get_height()
-            ax_hist.text(rect.get_x() + rect.get_width() / 2., height + 0.5,
-                        f'{pct:.0f}%',
-                        ha='center', va='bottom', fontsize=12, weight='bold')
-    
-    ax_hist.set_ylim(0, percentages.max() * 1.35 if percentages.max() > 0 else 10)
-    
-    # Formatting Histogram Axis
-    ax_hist.set_xticks(lower_bin_edges)
-    ax_hist.set_xticklabels([f"{b:.0f}" for b in lower_bin_edges], ha='center', fontsize=10) 
-    ax_hist.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
-    
-    # Hide all spines for ax_hist
-    for spine_name in ['left', 'top', 'bottom', 'right']:
-        ax_hist.spines[spine_name].set_visible(False)
-    
-    # --- 5. Plot Directional Split (ax_split) ---
-    
-    # Create the 100% stacked bar chart (ax_split)
-    ax_split.barh([0.5], [left_pct], height=1, color=left_bar_color, left=0)
-    ax_split.barh([0.5], [right_pct], height=1, color=right_bar_color, left=left_pct)
-
-    # Annotations for percentage labels
-    if left_pct > 5: 
-        ax_split.text(left_pct / 2, 0.5, f"LEFT\n{left_pct:.0f}%", 
-                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
-    if right_pct > 5:
-        ax_split.text(left_pct + right_pct / 2, 0.5, f"RIGHT\n{right_pct:.0f}%", 
-                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
-
-    # Formatting Split Axis
-    ax_split.set_xlim(0, 100)
-    ax_split.set_ylim(0, 1) 
-    ax_split.axis('off') 
-    
-    # --- 6. Add Sharp Border to Figure ---
-    # Reduced padding here for closer border
-    plt.tight_layout(pad=0.01)
-    
-    # Normalized figure coordinates for precise placement
-    border_rect = patches.Rectangle(
-        (0.1, 0.08), 
-        0.82,          
-        0.8,          
-        facecolor='none',
-        edgecolor='black',
-        linewidth=0.5,
-        transform=fig.transFigure,
-        clip_on=False,
-        joinstyle='miter' 
-    )
-    fig.add_artist(border_rect)
-    return fig
-    
-#Chart 9 Deviation Dstribution Histogram
-def create_deviation_distribution_histogram(df_in, handedness_label):
-    FIG_SIZE = (5, 4) 
-
-    # 0. Initial Check and Data Preparation
-    if df_in.empty or "Deviation" not in df_in.columns:
-        fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, f"No Deviation data for ({handedness_label})", ha='center', va='center', fontsize=12)
-        ax.axis('off')
-        return fig
-
-    df_data = df_in["Deviation"].dropna().astype(float)
-    df_data = df_data[(df_data >= -10) & (df_data <= 10)]
-
-    if df_data.empty:
-        fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, f"No valid Deviation data for ({handedness_label})", ha='center', va='center', fontsize=12)
-        ax.axis('off')
-        return fig
-
-    # --- 1. Histogram Data Preparation (Top Chart) ---
-    min_Deviation = np.floor(df_data.min())
-    max_Deviation = np.ceil(df_data.max())
-    bins = np.arange(min_Deviation, max_Deviation + 1.1, 1) 
-    
-    counts, _ = np.histogram(df_data, bins=bins)
-    total_balls = len(df_data)
-    percentages = (counts / total_balls) * 100
-    lower_bin_edges = bins[:-1] 
-    bar_centers = (bins[:-1] + bins[1:]) / 2
-    bar_width = 0.9 
-
-    # --- 2. Directional Split Data Preparation & Coloring (Bottom Chart) ---
-    
-    # Logic: < 0 is LEFT, >= 0 is RIGHT (to match the example image logic)
-    left_count = (df_data < 0).sum()
-    right_count = (df_data >= 0).sum()
-    
-    total_split = left_count + right_count
-    
-    if total_split > 0:
-        left_pct = (left_count / total_split) * 100
-        right_pct = (right_count / total_split) * 100
-    else:
-        left_pct, right_pct = 0, 0
-        
-    # Dynamic Color Assignment: Darker shade for the larger percentage
-    DARK_SHADE = '#ff5000'  # Primary, darker red
-    LIGHT_SHADE = '#FDD0A2' # Secondary, lighter orange
-
-    if left_pct >= right_pct:
-        left_bar_color = DARK_SHADE
-        right_bar_color = LIGHT_SHADE
-    else:
-        left_bar_color = LIGHT_SHADE
-        right_bar_color = DARK_SHADE
-
-    # --- 3. Matplotlib Setup and GridSpec ---
-    # Adjusted height ratio and HSPACE for tighter layout
-    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.3)
-    
-    ax_hist = fig.add_subplot(gs[0, 0])
-    ax_split = fig.add_subplot(gs[1, 0])
-
-    # --- 4. Plot Histogram (ax_hist) ---
-    rects = ax_hist.bar(bar_centers, percentages, width=bar_width, color='#ff5000', linewidth=1.0)
-    
-    # ax_hist.set_title(...) --- REMOVED TITLE per user request ---
-    
-    # Annotation (Percentages on top of bars)
-    for rect, pct in zip(rects, percentages):
-        if pct > 0.5: 
-            height = rect.get_height()
-            ax_hist.text(rect.get_x() + rect.get_width() / 2., height + 0.5,
-                        f'{pct:.0f}%',
-                        ha='center', va='bottom', fontsize=12, weight='bold')
-    
-    ax_hist.set_ylim(0, percentages.max() * 1.35 if percentages.max() > 0 else 10)
-    
-    # Formatting Histogram Axis
-    ax_hist.set_xticks(lower_bin_edges)
-    ax_hist.set_xticklabels([f"{b:.0f}" for b in lower_bin_edges], ha='center', fontsize=10) 
-    ax_hist.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
-    
-    # Hide all spines for ax_hist
-    for spine_name in ['left', 'top', 'bottom', 'right']:
-        ax_hist.spines[spine_name].set_visible(False)
-    
-    # --- 5. Plot Directional Split (ax_split) ---
-    
-    # Create the 100% stacked bar chart (ax_split)
-    ax_split.barh([0.5], [left_pct], height=1, color=left_bar_color, left=0)
-    ax_split.barh([0.5], [right_pct], height=1, color=right_bar_color, left=left_pct)
-
-    # Annotations for percentage labels
-    if left_pct > 5: 
-        ax_split.text(left_pct / 2, 0.5, f"LEFT\n{left_pct:.0f}%", 
-                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
-    if right_pct > 5:
-        ax_split.text(left_pct + right_pct / 2, 0.5, f"RIGHT\n{right_pct:.0f}%", 
-                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
-
-    # Formatting Split Axis
-    ax_split.set_xlim(0, 100)
-    ax_split.set_ylim(0, 1) 
-    ax_split.axis('off') 
-    
-    # --- 6. Add Sharp Border to Figure ---
-    # Reduced padding here for closer border
-    plt.tight_layout(pad=0.01)
-    
-    # Normalized figure coordinates for precise placement
-    border_rect = patches.Rectangle(
-        (0.1, 0.08), 
-        0.82,          
-        0.8,          
-        facecolor='none',
-        edgecolor='black',
-        linewidth=0.5,
-        transform=fig.transFigure,
-        clip_on=False,
-        joinstyle='miter' 
-    )
-    fig.add_artist(border_rect)
-    return fig
-
-# _________________________________________
-# Chart 10: Speed Distribution - PowerPlay
-# _________________________________________
-def create_pacer_speed_effectiveness_chart(df_in):
-    if df_in.empty:
-        fig, ax = plt.subplots(figsize=(5, 2))
-        ax.text(0.5, 0.5, "No Data", ha='center', va='center')
-        ax.axis('off')
-        return fig
-
-    # 1. Define Speed Groups for Pacers
-    def assign_speed_group(speed):
-        if speed < 120:
-            return "<120"
-        elif 120 <= speed <= 140:
-            return "120-140"
-        else:
-            return ">140"
-
-    df_temp = df_in.copy()
-    df_temp["ReleaseSpeed"] = pd.to_numeric(df_temp["ReleaseSpeed"], errors='coerce')
-    df_temp = df_temp.dropna(subset=["ReleaseSpeed"])
-    
-    df_temp["SpeedGroup"] = df_temp["ReleaseSpeed"].apply(assign_speed_group)
-    
-    # 2. Aggregate Data
-    ordered_groups = [">140", "120-140", "<120"] # Reordered for visual flow
-    summary = df_temp.groupby("SpeedGroup").agg(
-        Runs=("Runs", "sum"), 
-        Balls=("Runs", "count"),
-        Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum())
-    ).reindex(ordered_groups).fillna(0)
-    
-    # White Ball Metrics
-    summary["Eco"] = (summary["Runs"] / summary["Balls"] * 6).fillna(0)
-    summary["Bd%"] = (summary["Boundaries"] / summary["Balls"] * 100).fillna(0)
-
-    # 3. Plotting
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(5, 1.82), sharey=True)
-    plt.subplots_adjust(wspace=0.6) 
-    
-    y = np.arange(len(ordered_groups))
-    height = 0.4
-
-    # --- Column 1: Economy ---
-    ax1.barh(y, summary["Eco"], color='#ff5000', edgecolor='white', height=height)
-    ax1.set_title("Economy", fontsize=12, fontweight='bold')
-    ax1.set_yticks(y)
-    ax1.set_yticklabels(ordered_groups, fontsize=8, fontweight='bold')
-    
-    for i, v in enumerate(summary["Eco"]):
-        ax1.text(v + 0.2, i, f'{v:.1f}', va='center', fontweight='bold', fontsize=10)
-
-    # --- Column 2: Boundary % ---
-    ax2.barh(y, summary["Bd%"], color='#ff5000', edgecolor='white', height=height)
-    ax2.set_title("Bd %", fontsize=12, fontweight='bold')
-    ax2.set_xlim(0, 100)
-    
-    for i, v in enumerate(summary["Bd%"]):
-        ax2.text(v + 2, i, f'{v:.0f}%', va='center', fontweight='bold', fontsize=10)
-
-    # Formatting
-    for ax in [ax1, ax2]:
-        ax.spines[['top', 'right', 'bottom']].set_visible(False)
-        ax.xaxis.set_visible(False)
-        ax.invert_yaxis() 
-
-    return fig
-
 # Chart 11: Speed Effectiveness - Death Overs
 def create_pacer_speed_effectiveness_3col(df_in):
     if df_in.empty:
@@ -1532,10 +1051,6 @@ with col_rhb:
     # Chart 1b: Lateral Performance Boxes (Bowling Avg)
     # st.pyplot(create_pacer_lateral_performance_boxes(df_rhb, "RHB"), use_container_width=True)
     
-    # Chart 2: ZONAL ANALYSIS (CBH Boxes)
-    st.markdown("###### CREASE BEEHIVE ZONES v RHB")
-    st.pyplot(create_pacer_zonal_analysis(df_rhb, "RHB"), use_container_width=True)
-
     # Chart 3: PITCHMAP
     pitch_map_col, run_pct_col = st.columns([1, 1]) 
     with pitch_map_col:
@@ -1545,7 +1060,6 @@ with col_rhb:
         st.markdown("##### ")
         st.pyplot(create_pacer_pitch_length_bars(df_rhb), use_container_width=True)
 
-
      # Chart 4/5: RELEASE
     pace_col, release_col = st.columns([2, 2])
     with pace_col:
@@ -1554,52 +1068,7 @@ with col_rhb:
     with release_col:
         st.markdown("###### RELEASE v RHB")
         st.pyplot(create_pacer_release_analysis(df_rhb, "RHB"), use_container_width=True)
-        
-    #Chart 8/9: Swing Deviation Distribution 
-    swing_dist, deviation_dist = st.columns([2,2])
-    with swing_dist:
-        st.markdown("###### SWING v RHB")
-        st.pyplot(create_swing_distribution_histogram(df_rhb, "RHB"))
-    with deviation_dist:
-        st.markdown("###### DEVIATION v RHB")
-        st.pyplot(create_deviation_distribution_histogram(df_rhb, "RHB"))  
-        
-    st.markdown("""<hr style="height:5px;border:none;color:#333;background-color:#333;margin-bottom:8px;margin-top:5px;" /> """, unsafe_allow_html=True)
-    st.markdown("### POWERPLAY")  
-
-    #  Chart 10: Crease Beehive - Powerplay
-    st.markdown("###### CREASE BEEHIVE IN POWERPLAY v RHB")
-    st.pyplot(create_pacer_crease_beehive(df_pp_rhb,"RHB"), use_container_width=True) 
     
-    # Chart 11 Pitchmap, bars - Powerplay
-    pp_pitch_map_rhb, pp_run_pct_rhb = st.columns([1, 1]) 
-    with pp_pitch_map_rhb:
-        st.markdown("###### PITCHMAP IN POWERPLAY v RHB")
-        st.pyplot(create_pacer_pitch_map(df_pp_rhb), use_container_width=True)      
-    with pp_run_pct_rhb:
-        st.markdown("##### ") # Spacer to align with Pitchmap header
-        st.pyplot(create_pacer_pitch_length_bars(df_pp_rhb), use_container_width=True)
-
-    # Chart 12: Speed Distribution - Powerplay
-    st.markdown("###### SPEED DISTRIBUTION IN POWERPLAY - OVERALL")
-    st.pyplot(create_pacer_speed_effectiveness_chart(df_pp), use_container_width=True)
-    
-
-    st.markdown("""<hr style="height:5px;border:none;color:#333;background-color:#333;margin-bottom:8px;margin-top:5px;" /> """, unsafe_allow_html=True)
-    
-    st.markdown("### DEATH OVERS")  
-    #  Chart 14: Crease Beehive - Death Overs
-    st.markdown("###### CREASE BEEHIVE IN DEATH OVERS v RHB")
-    st.pyplot(create_pacer_crease_beehive(df_do_rhb,"RHB"), use_container_width=True) 
-    
-    # Chart 15 Pitchmap, bars - Death Overs
-    do_pitch_map_rhb, do_run_pct_rhb = st.columns([1, 1]) 
-    with do_pitch_map_rhb:
-        st.markdown("###### PITCHMAP IN DEATH OVERS v RHB")
-        st.pyplot(create_pacer_pitch_map(df_do_rhb), use_container_width=True)      
-    with do_run_pct_rhb:
-        st.markdown("##### ") # Spacer to align with Pitchmap header
-        st.pyplot(create_pacer_pitch_length_bars(df_do_rhb), use_container_width=True)
 
     # Chart 16: Speed Distribution - Death Overs
     st.markdown("###### SPEED DISTRIBUTION IN DEATH OVERS - OVERALL")
@@ -1617,9 +1086,6 @@ with col_lhb:
     # Chart 1b: Lateral Performance Boxes (Bowling Avg)
     # st.pyplot(create_pacer_lateral_performance_boxes(df_lhb, "LHB"), use_container_width=True)
 
-    # Chart 2: ZONAL ANALYSIS (CBH Boxes)
-    st.markdown("###### CREASE BEEHIVE ZONES v LHB")
-    st.pyplot(create_pacer_zonal_analysis(df_lhb, "LHB"), use_container_width=True)
 
     # Chart 3: PITCHMAP
     pitch_map_col, run_pct_col = st.columns([1, 1]) 
@@ -1639,55 +1105,6 @@ with col_lhb:
         st.markdown("###### RELEASE v LHB")
         st.pyplot(create_pacer_release_analysis(df_lhb, "LHB"), use_container_width=True)
         
-    #Chart 8/9: Swing Deviation Distribution
-    swing_dist, deviation_dist = st.columns([2,2])
-    with swing_dist:
-        st.markdown("###### SWING v LHB")
-        st.pyplot(create_swing_distribution_histogram(df_lhb, "LHB"))
-    with deviation_dist:
-        st.markdown("###### DEVIATION v LHB")
-        st.pyplot(create_deviation_distribution_histogram(df_lhb, "LHB"))
-    
-    st.markdown("""<hr style="height:5px;border:none;color:#333;background-color:#333;margin-bottom:8px;margin-top:5px;" /> """, unsafe_allow_html=True)
-    st.markdown("### ")    
-    #  Chart 10: Crease Beehive - Powerplay
-    st.markdown("###### CREASE BEEHIVE IN POWERPLAY v LHB")
-    st.pyplot(create_pacer_crease_beehive(df_pp_lhb,"LHB"), use_container_width=True)    
-    
-    #  Chart 11: Pitchmap - Powerplay
-    pp_pitch_map_lhb, pp_run_pct_lhb = st.columns([1, 1]) 
-    with pp_pitch_map_lhb:
-        st.markdown("###### PITCHMAP IN POWERPLAY v LHB")
-        st.pyplot(create_pacer_pitch_map(df_pp_lhb), use_container_width=True)    
-    with pp_run_pct_lhb:
-        st.markdown("##### ") # Spacer to align with Pitchmap header
-        st.pyplot(create_pacer_pitch_length_bars(df_pp_lhb), use_container_width=True)
-    
-    # Chart 13  oVERALL deviation  - Powerplay
-    swing, deviation = st.columns([1, 1]) 
-    with swing:
-        st.markdown("###### DEVIATION IN POWERPLAY - OVERALL")
-        st.pyplot(create_deviation_distribution_histogram(df_pp, "Overall PP"), use_container_width=True)
-    # Chart 13: Overall Swing - Powerplay 
-    with deviation:
-        st.markdown("###### SWING IN POWERPLAY - OVERALL")
-        st.pyplot(create_swing_distribution_histogram(df_pp, "Overall PP"), use_container_width=True)
-
-    st.markdown("""<hr style="height:5px;border:none;color:#333;background-color:#333;margin-bottom:8px;margin-top:5px;" /> """, unsafe_allow_html=True)
-    
-    st.markdown("### ")  
-    #  Chart 13: Crease Beehive - Death Overs
-    st.markdown("###### CREASE BEEHIVE IN DEATH OVERS v LHB")
-    st.pyplot(create_pacer_crease_beehive(df_do_lhb,"LHB"), use_container_width=True) 
-    
-    # Chart 14 Pitchmap, bars - Death Overs
-    do_pitch_map_lhb, do_run_pct_lhb = st.columns([1, 1]) 
-    with do_pitch_map_lhb:
-        st.markdown("###### PITCHMAP IN DEATH OVERS v LHB")
-        st.pyplot(create_pacer_pitch_map(df_do_lhb), use_container_width=True)      
-    with do_run_pct_lhb:
-        st.markdown("##### ") # Spacer to align with Pitchmap header
-        st.pyplot(create_pacer_pitch_length_bars(df_do_lhb), use_container_width=True)
     
     # Chart 16: Wagon wheel sr - Death Overs
     wagon_rhb,wagon_lhb = st.columns([1,1])
