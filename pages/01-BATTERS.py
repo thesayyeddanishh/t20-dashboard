@@ -878,7 +878,7 @@ def create_wagon_wheel(df_in, delivery_type):
     return fig        
         # === CRITICAL FIX: CENTERING PERCENTAGE LABELS AND STYLING ===
         for i, autotext in enumerate(autotexts):
-            if i >= len(run_percentages): break
+        if i >= len(run_percentages): break
                 
             percent = run_percentages[i]
             
