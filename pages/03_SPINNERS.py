@@ -19,8 +19,6 @@ from math import floor, ceil
 # =========================================================
 
 def create_Spinner_pitch_map(df_in): 
-    # Define Spinner Bins (Delivery Type is fixed as spin)
-    # Bins: 1.2-6: Full, 6-8 Length, 8-10 Short, 10-15 Bouncer
     PITCH_BINS = {
          "OP": [-2, 2.8],
         "Full": [2.8, 4.4],
@@ -40,7 +38,7 @@ def create_Spinner_pitch_map(df_in):
     pitch_non_wickets = df_in[df_in["Wicket"] == False]
     
     # --- Chart Setup ---
-    fig, ax = plt.subplots(figsize=(4,6)) # Maintained figsize=(4,6)
+    fig, ax = plt.subplots(figsize=(4.5,9))
     ax.set_facecolor('white')
     fig.patch.set_facecolor('white')
 
@@ -74,7 +72,7 @@ def create_Spinner_pitch_map(df_in):
     # Non-Wickets (light grey)
     ax.scatter(
         pitch_non_wickets["BounceY"], pitch_non_wickets["BounceX"], 
-        s=60, 
+        s=100, 
         c='#D3D3D3', 
         edgecolor='white', 
         linewidths=1.0, 
@@ -85,7 +83,7 @@ def create_Spinner_pitch_map(df_in):
     # Wickets (red)
     ax.scatter(
         pitch_wickets["BounceY"], pitch_wickets["BounceX"], 
-        s=90, 
+        s=150, 
         c='red', 
         edgecolor='white', 
         linewidths=1.0, 
@@ -94,16 +92,16 @@ def create_Spinner_pitch_map(df_in):
     )
     
     # --- 2. Add Stump lines (Vertical Lines) ---
-    ax.axvline(x=-0.18, color="#777777", linestyle="--", linewidth=1)
-    ax.axvline(x=0.18, color="#777777", linestyle="--", linewidth=1)
-    ax.axvline(x=0, color="#777777", linestyle="--", linewidth=0.8)
+    ax.axvline(x=-0.18, color="#777777", linestyle="-", linewidth=0.5)
+    ax.axvline(x=0.18, color="#777777", linestyle="-", linewidth=0.5)
+    ax.axvline(x=0, color="#777777", linestyle="-", linewidth=0.5)
     
     # --- 4. Layout (Axis and Spines) ---
     
     # Set axis limits
     ax.set_xlim([-1.5, 1.5])
     # Reverse the axis to match the cricket visual (batter at bottom)
-    ax.set_ylim([10.0, -4.0]) 
+    ax.set_ylim([10.0, 0]) 
 
     # Hide all axis elements
     ax.set_xticks([])
@@ -135,7 +133,7 @@ def get_spinner_pitch_bins():
     }
 def create_Spinner_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
-    FIG_SIZE = (3, 4.5) 
+    FIG_SIZE = (6, 12) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -174,7 +172,7 @@ def create_Spinner_pitch_length_bars(df_in):
     
     # 2. Chart Setup (3 Rows, 1 Column)
     fig, axes = plt.subplots(3, 1, figsize=FIG_SIZE, sharey=True) 
-    plt.subplots_adjust(hspace=10) 
+    plt.subplots_adjust(hspace=5) 
 
     # --- Metrics and Titles (Order: Economy, Dismissals, Dot%) ---
     metrics = ["Economy", "Dismissals", "Dot%"]
@@ -212,12 +210,12 @@ def create_Spinner_pitch_length_bars(df_in):
             
             ax.text(val, j, label, 
                     ha='left', va='center', 
-                    fontsize=10, fontweight='bold', color='black',
+                    fontsize=15, fontweight='bold', color='black',
                     bbox=dict(facecolor='White', alpha=0.8, edgecolor='none', pad=2),
                     zorder=4)
 
         # --- Formatting ---
-        ax.set_title(title, fontsize=10, fontweight='bold', pad=0, loc='left')
+        ax.set_title(title, fontsize=12, fontweight='bold', pad=0, loc='left')
         ax.set_facecolor('white')
         ax.tick_params(axis='x', labelsize=8)
         ax.tick_params(axis='y', length=0) 
@@ -427,7 +425,7 @@ def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function a
 # =========================================================
 
 def create_Spinner_release_analysis(df_in, handedness_label): 
-    FIG_SIZE = (4, 3.4) # Increased height for both charts
+    FIG_SIZE = (3, 3) # Increased height for both charts
 
     if df_in.empty or "ReleaseY" not in df_in.columns or "ReleaseZ" not in df_in.columns:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -480,7 +478,7 @@ def create_Spinner_release_analysis(df_in, handedness_label):
 
     # --- 2. Setup Figure and GridSpec ---
     fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1.2], hspace=0.1)
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.1)
     
     ax_map = fig.add_subplot(gs[0, 0])
     ax_metrics = fig.add_subplot(gs[1, 0])
@@ -493,19 +491,19 @@ def create_Spinner_release_analysis(df_in, handedness_label):
     # Non-Wickets (light grey)
     ax_map.scatter(
         release_non_wickets["ReleaseY"], release_non_wickets["ReleaseZ"], 
-        s=40, color='#D3D3D3', alpha=0.8, edgecolors='white', linewidths=0.5, label="No Wicket"
+        s=10, color='#D3D3D3', alpha=1.0, edgecolors='white', linewidths=0.5, label="No Wicket"
     )
 
     # Wickets (red)
     ax_map.scatter(
         release_wickets["ReleaseY"], release_wickets["ReleaseZ"], 
-        s=80, color='red', alpha=1.0, edgecolors='white', linewidths=1.0, label="Wicket", zorder=5
+        s=10, color='red', alpha=1.0, edgecolors='white', linewidths=1.0, label="Wicket", zorder=5
     )
     
     # Add Stump Lines
     stump_lines = [-0.18, 0, 0.18]
     for y_val in stump_lines:
-        ax_map.axvline(x=y_val, color="#777777", linestyle="--", linewidth=1.0)
+        ax_map.axvline(x=y_val, color="#777777", linestyle="-", linewidth=0.5)
     
     # Formatting Map
     ax_map.set_xlim(-1.5, 1.5)
@@ -529,19 +527,19 @@ def create_Spinner_release_analysis(df_in, handedness_label):
 
     # Titles
     # Metric Labels (Left Alignment for labels)
-    ax_metrics.text(0.05, 1, "W:", ha='right', va='center', fontsize=10, fontweight='bold')
-    ax_metrics.text(0.05, 0.5, "Avg:", ha='right', va='center', fontsize=10, fontweight='bold')
-    ax_metrics.text(0.05, 0, "SR:", ha='right', va='center', fontsize=10, fontweight='bold')
+    ax_metrics.text(0.05, 1, "W:", ha='right', va='center', fontsize=5, fontweight='bold')
+    ax_metrics.text(0.05, 0.5, "Avg:", ha='right', va='center', fontsize=5, fontweight='bold')
+    ax_metrics.text(0.05, 0, "SR:", ha='right', va='center', fontsize=5, fontweight='bold')
 
     # LEFT Values
-    ax_metrics.text(0.2, 1, format_metric(left["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    ax_metrics.text(0.2, 0.5, format_metric(left["BA"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    ax_metrics.text(0.2, 0, format_metric(left["SR"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.2, 1, format_metric(left["Wickets"], is_wickets=True), ha='center', va='center', fontsize=8, color='red', fontweight='bold')
+    ax_metrics.text(0.2, 0.5, format_metric(left["BA"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
+    ax_metrics.text(0.2, 0, format_metric(left["SR"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
 
     # RIGHT Values
-    ax_metrics.text(0.9, 1, format_metric(right["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    ax_metrics.text(0.9, 0.5, format_metric(right["BA"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    ax_metrics.text(0.9, 0, format_metric(right["SR"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.9, 1, format_metric(right["Wickets"], is_wickets=True), ha='center', va='center', fontsize=8, color='red', fontweight='bold')
+    ax_metrics.text(0.9, 0.5, format_metric(right["BA"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
+    ax_metrics.text(0.9, 0, format_metric(right["SR"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
     
     # --- 5. Add Sharp Border to Figure ---
     plt.tight_layout(pad=0.1)
@@ -573,7 +571,7 @@ def create_Spinner_release_analysis(df_in, handedness_label):
 
 def create_spinner_hitting_missing(df_in, handedness_label):
 
-    FIG_SIZE = (7, 5.5)
+    FIG_SIZE = (10, 5.5)
 
     # Early exit if empty
     if df_in.empty:
@@ -590,7 +588,7 @@ def create_spinner_hitting_missing(df_in, handedness_label):
         (df_map["StumpsY"] >= -0.18) &
         (df_map["StumpsY"] <= 0.18) &
         (df_map["StumpsZ"] >= 0) &
-        (df_map["StumpsZ"] <= 0.78)
+        (df_map["StumpsZ"] <= 0.72)
     )
     df_map["HittingCategory"] = np.where(is_hitting_target, "HITTING", "MISSING")
 
@@ -756,7 +754,7 @@ def create_spinner_hitting_missing(df_in, handedness_label):
     return fig
 
 
-# Chart 10 : Scoring Areas by Batting Strike Rate
+# Chart 10 : Scoring Areas
 def calculate_scoring_wagon(row):
     """Calculates the scoring area based on LandingX/Y coordinates and handedness."""
     LX = row.get("LandingX"); LY = row.get("LandingY"); RH = row.get("IsBatsmanRightHanded")
@@ -798,7 +796,7 @@ def create_spinner_wagon_wheel(df_in):
 
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, "No Data for Death Overs (16-20)", ha='center', va='center', fontsize=12)
+        ax.text(0.5, 0.5, "No Data", ha='center', va='center', fontsize=12)
         ax.axis('off')
         return fig
 
@@ -809,7 +807,6 @@ def create_spinner_wagon_wheel(df_in):
     # 2. Aggregate Data (Runs and Balls for SR)
     summary = df_in.groupby("ScoringWagon").agg(
         TotalRuns=("Runs", "sum"), 
-        TotalBalls=("Runs", "count"),
         FixedAngle=("FixedAngle", 'first')
     ).reset_index().dropna(subset=["ScoringWagon"])
 
@@ -820,8 +817,13 @@ def create_spinner_wagon_wheel(df_in):
     
     template = pd.DataFrame({"ScoringWagon": all_areas, "FixedAngle": [calculate_scoring_angle(a) for a in all_areas]})
     summary = template.merge(summary.drop(columns=["FixedAngle"]), on="ScoringWagon", how="left").fillna(0)
-    summary["SR"] = summary.apply(lambda row: (row["TotalRuns"] / row["TotalBalls"] * 100) if row["TotalBalls"] > 0 else 0, axis=1)
-    summary['RankSR'] = summary['SR'].rank(method='dense', ascending=False)
+    total_runs_overall = summary["TotalRuns"].sum()
+    if total_runs_overall > 0:
+        summary["RunPct"] = (summary["TotalRuns"] / total_runs_overall * 100)
+    else:
+        summary["RunPct"] = 0
+        
+    summary['Rank'] = summary['RunPct'].rank(method='dense', ascending=False)
 
     # 3. Plotting
     fig, ax = plt.subplots(figsize=FIG_SIZE)
