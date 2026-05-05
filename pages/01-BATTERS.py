@@ -1518,10 +1518,6 @@ col1, col2 = st.columns(2)
 # --- LEFT COLUMN: SEAM ANALYSIS ---
 with col1:
     st.markdown("### v SEAM")
-
-    --# Row 1: Zonal Analysis (Beehive Zones)
-    --st.markdown("###### CREASE BEEHIVE ZONES v SEAM")
-    --st.pyplot(create_zonal_analysis(df_seam, batsman, "Seam"), use_container_width=True)
     
     # Row 2: Crease Beehive Scatter
     st.markdown("###### CREASE BEEHIVE v SEAM")
@@ -1596,10 +1592,6 @@ with col1:
 # --- RIGHT COLUMN: SPIN ANALYSIS ---
 with col2:
     st.markdown("### v SPIN")
-    
-    # Row 1: Zonal Analysis (Beehive Zones)
-    st.markdown("###### CREASE BEEHIVE ZONES v SPIN")
-    st.pyplot(create_zonal_analysis(df_spin, batsman, "Spin"), use_container_width=True)
     
     # Row 2: Crease Beehive Scatter
     st.markdown("###### CREASE BEEHIVE v SPIN")
