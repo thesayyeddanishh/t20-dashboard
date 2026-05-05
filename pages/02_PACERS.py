@@ -781,7 +781,7 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     for i, (idx, row) in enumerate(summary.iterrows()):
         val = row["SR"]
         # If no wickets, display total balls as an integer
-        label = f"{int(row['Balls'])} B" if row["Wickets"] == 0 else f"{val:.1f}"[cite: 1]
+        label = f"{int(row['Balls'])} B" if row["Wickets"] == 0 else f"{val:.1f}"
         ax2.text(val + 1, i, label, va='center', fontweight='bold', fontsize=10)
 
     # --- Column 3: Bowling Average (Avg) / Runs ---
@@ -790,7 +790,7 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     for i, (idx, row) in enumerate(summary.iterrows()):
         val = row["Avg"]
         # If no wickets, display total runs as an integer
-        label = f"{int(row['Runs'])} R" if row["Wickets"] == 0 else f"{val:.1f}"[cite: 1]
+        label = f"{int(row['Runs'])} R" if row["Wickets"] == 0 else f"{val:.1f}"
         ax3.text(val + 1, i, label, va='center', fontweight='bold', fontsize=10)
 
     # Formatting
