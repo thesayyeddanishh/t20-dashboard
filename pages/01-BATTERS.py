@@ -674,10 +674,10 @@ def create_interception_side_on(df_in, delivery_type):
             avg_display = f"{avg:.0f}" # Use .1f so Avg isn't just a rounded whole number
             color = cmap(norm(sr)) 
         
-        # Contrast logic for text
-        r, g, b, a = color
-        luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        text_color = 'white' if luminosity < 0.5 else 'black'
+            # Contrast logic for text
+            r, g, b, a = color
+            luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            text_color = 'white' if luminosity < 0.5 else 'black'
         
     # Draw the box  
     ax_bar.barh(
