@@ -908,7 +908,7 @@ def create_wagon_wheel(df_in, delivery_type):
                 # Hide text for 0% slices
                 autotext.set_text('')
         
-        ax_wagon.axis('equal') 
+        ax_wagon.axis('equal'); 
 
 # Chart 12: Speed Effectiveness
 def create_speed_metrics_bar(df_in, delivery_type):
