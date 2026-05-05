@@ -664,14 +664,14 @@ for index, row in df_summary.iterrows():
     sr = row["SR"]
     avg = row["Avg"]
     
-    if sr == 0:
+    if sr == 0 or np.isnan(sr):
         sr_display = '0'
         avg_display = '0.0'
         color = 'white'
         text_color = 'black'
     else:
         sr_display = f"{sr:.0f}"
-        avg_display = f"{avg:.0f}"
+        avg_display = f"{avg:.1f}" # Use .1f so Avg isn't just a rounded whole number
         color = cmap(norm(sr)) 
         
         # Contrast logic for text
@@ -690,19 +690,17 @@ for index, row in df_summary.iterrows():
         linewidth=0.4
     )
     
-    # --- UPDATED TEXT: Multi-line Format ---
-    # Line 1: Runs and Wickets
-    label_top = f"{Runs} Runs, {W}W"
-    # Line 2: Avg and SR
+    # --- FIXED VARIABLE NAMES HERE ---
+    label_top = f"{runs} Runs, {wickets}W" 
     label_bottom = f"{avg_display} Avg, {sr_display} SR"
     
     center_x = left + box_width / 2
     
-    # Position Line 1 (Upper half of the colored box)
+    # Position Line 1 (Upper half)
     ax_bar.text(center_x, 0.62, label_top, ha='center', va='center', 
                 fontsize=8, fontweight='bold', color=text_color)
     
-    # Position Line 2 (Lower half of the colored box)
+    # Position Line 2 (Lower half)
     ax_bar.text(center_x, 0.38, label_bottom, ha='center', va='center', 
                 fontsize=8, fontweight='bold', color=text_color)
     
@@ -710,7 +708,6 @@ for index, row in df_summary.iterrows():
     ax_bar.text(center_x, 0.82, index, ha='center', va='bottom', fontsize=9, color='black')
 
     left += box_width
-
 ax_bar.set_xlim(0, 1)
 ax_bar.set_ylim(0, 1) 
 ax_bar.axis('off')
