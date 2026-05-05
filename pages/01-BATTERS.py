@@ -716,10 +716,10 @@ ax_bar.set_ylim(0, 1)
 ax_bar.axis('off')
 
 # ----------------------------------------------------------------------
-    # ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
-    # ----------------------------------------------------------------------
-    
-    plt.tight_layout(pad=0.5) # Increased slightly to prevent label clipping
+# ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
+# ----------------------------------------------------------------------
+
+plt.tight_layout(pad=0.5) # Increased slightly to prevent label clipping
 
     # Define a clean, uniform padding value (in figure fraction)
     # 0.01 to 0.015 is usually the "sweet spot" for a professional look
