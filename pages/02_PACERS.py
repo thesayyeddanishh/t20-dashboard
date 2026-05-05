@@ -133,7 +133,7 @@ def get_pacer_pitch_bins():
     }
 def create_pacer_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
-    FIG_SIZE = (6, 9) 
+    FIG_SIZE = (6, 10) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -172,7 +172,7 @@ def create_pacer_pitch_length_bars(df_in):
     
     # 2. Chart Setup (3 Rows, 1 Column)
     fig, axes = plt.subplots(3, 1, figsize=FIG_SIZE, sharey=True) 
-    plt.subplots_adjust(hspace=10) 
+    plt.subplots_adjust(hspace=5) 
 
     # --- Metrics and Titles (Order: Economy, Dismissals, Dot%) ---
     metrics = ["Economy", "Dismissals", "Dot%"]
