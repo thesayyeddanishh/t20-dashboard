@@ -882,7 +882,7 @@ def create_wagon_wheel(df_in, delivery_type):
         percent = run_percentages[i]
     
             # 1. Set the actual percentage text
-            if percent > 0:
+        if percent > 0:
                 autotext.set_text(f'{percent:.0f}%')
                 
                 # 💥 FIX: Ensure percentage text is centered in the slice (horizontally and vertically)
@@ -913,12 +913,12 @@ def create_speed_metrics_bar(df_in, delivery_type):
 
     # 1. Define Dynamic Speed Groups
     def assign_speed_group(speed):
-        if delivery_type == "Seam":
+    if delivery_type == "Seam":
             if speed < 125: return "<125"
             elif 125 <= speed <= 140: return "125-140"
             else: return "140+"
         else: # Spin logic
-            if speed < 85: return "<85"
+        if speed < 85: return "<85"
             elif 85 <= speed <= 95: return "85-95"
             else: return "95+"
 
