@@ -27,8 +27,8 @@ def create_pacer_pitch_map(df_in):
 
     if df_in.empty:
         # Create an empty figure with a text note if data is missing
-        fig, ax = plt.subplots(figsize=(4,6))
-        ax.text(0.5, 0.5, f"No data for Pacer Pitch Map", ha='center', va='center', fontsize=12)
+        fig, ax = plt.subplots(figsize=(3,3))
+        ax.text(0.5, 0.5, f"No data for Pa7er Pitch Map", ha='center', va='center', fontsize=12)
         ax.axis('off')
         return fig
         
@@ -37,7 +37,7 @@ def create_pacer_pitch_map(df_in):
     pitch_non_wickets = df_in[df_in["Wicket"] == False]
     
     # --- Chart Setup ---
-    fig, ax = plt.subplots(figsize=(5,6))
+    fig, ax = plt.subplots(figsize=(5,7))
     ax.set_facecolor('white')
     fig.patch.set_facecolor('white')
 
@@ -133,7 +133,7 @@ def get_pacer_pitch_bins():
     }
 def create_pacer_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
-    FIG_SIZE = (5, 3) 
+    FIG_SIZE = (5, 7) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
