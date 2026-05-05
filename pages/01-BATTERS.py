@@ -671,7 +671,7 @@ def create_interception_side_on(df_in, delivery_type):
             text_color = 'black'
         else:
             sr_display = f"{sr:.0f}"
-            avg_display = f"{avg:.1f}" # Use .1f so Avg isn't just a rounded whole number
+            avg_display = f"{avg:.0f}" # Use .1f so Avg isn't just a rounded whole number
             color = cmap(norm(sr)) 
         
         # Contrast logic for text
@@ -691,7 +691,7 @@ def create_interception_side_on(df_in, delivery_type):
     )
     
     # --- FIXED VARIABLE NAMES HERE ---
-    label_top = f"{runs} Runs, {wickets}W" 
+    label_top = f"{runs} R, {wickets}W" 
     label_bottom = f"{avg_display} Avg, {sr_display} SR"
     
     center_x = left + box_width / 2
