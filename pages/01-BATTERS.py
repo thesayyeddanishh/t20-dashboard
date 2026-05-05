@@ -715,51 +715,41 @@ ax_bar.set_xlim(0, 1)
 ax_bar.set_ylim(0, 1) 
 ax_bar.axis('off')
 
-# ----------------------------------------------------------------------
-# ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
-# ----------------------------------------------------------------------
-
-plt.tight_layout(pad=0.5) # Increased slightly to prevent label clipping
-
-    # Define a clean, uniform padding value (in figure fraction)
-    # 0.01 to 0.015 is usually the "sweet spot" for a professional look
-PADDING_X = 0.012
-PADDING_Y = 0.015 
-
-    # 1. Get the bounding boxes of the top and bottom charts
-scatter_bbox = ax_scatter.get_position()
-bar_bbox = ax_bar.get_position() 
-
-    # 2. Determine the outermost coordinates
-    # We take the minimum left/bottom and maximum right/top
-x0 = min(scatter_bbox.x0, bar_bbox.x0)
-y0 = min(scatter_bbox.y0, bar_bbox.y0)
-x1 = max(scatter_bbox.x1, bar_bbox.x1)
-y1 = max(scatter_bbox.y1, bar_bbox.y1)
+# -----------------------------------------------------------
+    ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
     
-    # 3. Calculate Padded Dimensions
-    # We shift the origin (x0, y0) down and left
-rect_x = x0 - PADDING_X
-rect_y = y0 - PADDING_Y
+    plt.tight_layout(pad=0.2)
     
-    # The width/height must account for padding on BOTH sides
-rect_width = (x1 - x0) + (2 * PADDING_X)
-rect_height = (y1 - y0) + (2 * PADDING_Y)
+    PADDING = 0.008
 
-    # 4. Draw the Rectangle
-border_rect = patches.Rectangle(
-        (rect_x, rect_y), 
-        rect_width, 
-        rect_height,  
+    bh_bbox = ax_bh.get_position()
+    box_bbox = ax_boxes.get_position()
+    
+    x0_orig = min(bh_bbox.x0, box_bbox.x0)
+    y0_orig = box_bbox.y0
+    x1_orig = max(bh_bbox.x1, box_bbox.x1)
+    y1_orig = bh_bbox.y1
+    
+    x0_pad = x0_orig - PADDING
+    y0_pad = y0_orig - PADDING
+    
+    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
+    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
+
+    border_rect = patches.Rectangle(
+        (x0_pad, y0_pad), 
+        width_pad, 
+        height_pad, 
         facecolor='none', 
         edgecolor='black', 
-        linewidth=0.8, # Slightly thicker for a "frame" feel
+        linewidth=0.5, 
         transform=fig.transFigure, 
-        clip_on=False,
-        zorder=0 # Ensure it stays behind any data points if they overlap
+        clip_on=False
     )
-fig.patches.append(border_rect)
-return fig
+
+    fig.patches.append(border_rect)
+
+    return fig
     
 
 # --- Helper Functions for Chart 6 ---
