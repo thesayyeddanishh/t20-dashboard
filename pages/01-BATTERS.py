@@ -729,13 +729,18 @@ def create_interception_side_on(df_in, delivery_type):
     return fig
     
 
-# Chart 6 Scoring wagon wheel
+# --- Helper Functions for Chart 6 ---
 def calculate_scoring_wagon(row):
     """Calculates the scoring area based on LandingX/Y coordinates and handedness."""
-    LX = row.get("LandingX"); LY = row.get("LandingY"); RH = row.get("IsBatsmanRightHanded")
-    if RH is None or LX is None or LY is None or row.get("Runs", 0) == 0: return None
+    LX = row.get("LandingX")
+    LY = row.get("LandingY")
+    RH = row.get("IsBatsmanRightHanded")
     
-    def atan_safe(numerator, denominator): return np.arctan(numerator / denominator) if denominator != 0 else np.nan 
+    if RH is None or LX is None or LY is None or row.get("Runs", 0) == 0: 
+        return None
+    
+    def atan_safe(numerator, denominator): 
+        return np.arctan(numerator / denominator) if denominator != 0 else np.nan 
     
     # Right Handed Batsman Logic
     if RH == True: 
@@ -747,6 +752,7 @@ def calculate_scoring_wagon(row):
         elif LX > 0 and LY >= 0:
             if atan_safe(LY, LX) >= np.pi / 4: return "SQUARE LEG"
             elif atan_safe(LY, LX) <= np.pi / 4: return "LONG ON"
+            
     # Left Handed Batsman Logic
     elif RH == False: 
         if LX <= 0 and LY > 0: return "THIRD MAN"
@@ -765,40 +771,45 @@ def calculate_scoring_angle(area):
     elif area in ["COVER", "SQUARE LEG", "LONG OFF", "LONG ON"]: return 45
     return 0
 
-# --- Main Combined Function ---
+# --- Main Combined Function (Chart 6) ---
 def create_wagon_wheel(df_in, delivery_type):
     FIG_WIDTH = 11.0
-    FIG_HEIGHT = 16 # Adjusted height for the vertical stack
+    FIG_HEIGHT = 16 
     FIG_SIZE = (FIG_WIDTH, FIG_HEIGHT)
 
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, "No Data for Combined Scoring Analysis", ha='center', va='center', fontsize=12)
+        ax.text(0.5, 0.5, f"No Data for {delivery_type} Analysis", ha='center', va='center', fontsize=12)
         ax.axis('off')
         return fig
 
-    # ----------------------------------------------------------------------
-    ## --- PART 1: CHART 6 - SCORING WAGON WHEEL (ax_wagon) ---
-    # ----------------------------------------------------------------------
-    wagon_summary = pd.DataFrame() 
+    # CRITICAL FIX: Initialize the figure and axes to avoid NameError
+    fig, (ax_wagon, ax_sr) = plt.subplots(2, 1, figsize=FIG_SIZE)
+    plt.subplots_adjust(hspace=0.3)
+
     try:
         df_wagon = df_in.copy()
         df_wagon["ScoringWagon"] = df_wagon.apply(calculate_scoring_wagon, axis=1)
         df_wagon["FixedAngle"] = df_wagon["ScoringWagon"].apply(calculate_scoring_angle)
         
-        summary_with_shots = df_wagon.groupby("ScoringWagon").agg(TotalRuns=("Runs", "sum"), FixedAngle=("FixedAngle", 'first')).reset_index().dropna(subset=["ScoringWagon"])
+        summary_with_shots = df_wagon.groupby("ScoringWagon").agg(
+            TotalRuns=("Runs", "sum"), 
+            Balls=("Runs", "count"),
+            FixedAngle=("FixedAngle", 'first')
+        ).reset_index().dropna(subset=["ScoringWagon"])
         
         handedness_mode = df_in["IsBatsmanRightHanded"].dropna().mode()
         is_right_handed = handedness_mode.iloc[0] if not handedness_mode.empty else True
         
         if is_right_handed:
-            # RHB areas start from Fine Leg (top left) and go clockwise
             all_areas = ["FINE LEG", "SQUARE LEG", "LONG ON", "LONG OFF", "COVER", "THIRD MAN"] 
         else:
-            # LHB areas start from Third Man (top left) and go clockwise
             all_areas = ["THIRD MAN", "COVER", "LONG OFF", "LONG ON", "SQUARE LEG", "FINE LEG"]
             
-        template_df = pd.DataFrame({"ScoringWagon": all_areas, "FixedAngle": [calculate_scoring_angle(area) for area in all_areas]})
+        template_df = pd.DataFrame({
+            "ScoringWagon": all_areas, 
+            "FixedAngle": [calculate_scoring_angle(area) for area in all_areas]
+        })
 
         wagon_summary = template_df.merge(summary_with_shots.drop(columns=["FixedAngle"], errors='ignore'), on="ScoringWagon", how="left").fillna(0) 
         wagon_summary["ScoringWagon"] = pd.Categorical(wagon_summary["ScoringWagon"], categories=all_areas, ordered=True)
@@ -806,64 +817,65 @@ def create_wagon_wheel(df_in, delivery_type):
         
         total_runs = wagon_summary["TotalRuns"].sum()
         wagon_summary["RunPercentage"] = (wagon_summary["TotalRuns"] / total_runs) * 100 if total_runs > 0 else 0 
-        
-        wagon_summary["FixedAngle"] = pd.to_numeric(wagon_summary["FixedAngle"], errors='coerce').fillna(0).astype(int)
-    
-    except Exception as e:
-        ax_wagon.text(0.5, 0.5, f"Wagon Wheel Calculation Error: {e}", ha='center', va='center', fontsize=8)
-        ax_wagon.axis('off')
-        return fig # Return early if data processing fails
+        wagon_summary["SR"] = (wagon_summary["TotalRuns"] / wagon_summary["Balls"] * 100).fillna(0)
 
-    
-    # --- Data Extraction and CRITICAL Validation ---
-    angles = wagon_summary["FixedAngle"].tolist()
-    run_percentages = wagon_summary["RunPercentage"].tolist() 
-    labels = wagon_summary["ScoringWagon"].tolist()
-    
-    if not angles or all(a == 0 for a in angles):
-        ax_wagon.text(0.5, 0.5, "Insufficient Wagon Wheel Data", ha='center', va='center', fontsize=8) 
-        ax_wagon.axis('off')
-        # Skip plotting the pie chart, but allow the rest of the combined chart to proceed
-    else:
-        # --- Color Logic (Top 1 Rank Only) ---
+        # --- Plotting Part 1: Runs Distribution Pie ---
+        angles = wagon_summary["FixedAngle"].tolist()
+        run_percentages = wagon_summary["RunPercentage"].tolist() 
+        
         wagon_summary['Rank'] = wagon_summary['RunPercentage'].rank(method='dense', ascending=False)
         COLOR_HIGH = '#ff5000'
         COLOR_DEFAULT = 'white'
 
-        colors = []
-        for index, row in wagon_summary.iterrows():
-            current_rank = row['Rank']
-            if row['RunPercentage'] == 0:
-                colors.append(COLOR_DEFAULT)
-                continue
-            if current_rank == 1:
-                colors.append(COLOR_HIGH)
-            else:
-                colors.append(COLOR_DEFAULT)
+        colors = [COLOR_HIGH if (r == 1 and p > 0) else COLOR_DEFAULT for r, p in zip(wagon_summary['Rank'], wagon_summary['RunPercentage'])]
 
-        # --- Plotting Call ---
-        pie_output = ax_wagon.pie(
+        wedges, texts, autotexts = ax_wagon.pie(
             angles, 
             colors=colors, 
             wedgeprops={"width": 1, "edgecolor": "black"}, 
             startangle=90, 
             counterclock=False, 
-            autopct='%.0f', 
-            pctdistance=0.6 # Keeps percentage label centered in radius
+            autopct='', 
+            pctdistance=0.6
         )
+
         ax_wagon.set_title("RUNS DISTRIBUTION (%)", fontsize=20, fontweight='bold', pad=20)
         
-        if len(pie_output) == 3:
-            wedges, texts, autotexts = pie_output
-        elif len(pie_output) == 2:
-            wedges, texts = pie_output
-            autotexts = [] # Assign an empty list if autotexts are missing
-        else:
-            # Handle unexpected plot output
-            ax_wagon.text(0.5, 0.5, "Wagon Wheel Plotting Error", ha='center', va='center', fontsize=8)
-            ax_wagon.axis('off')
-            return fig
+        for i, autotext in enumerate(autotexts):
+            percent = run_percentages[i]
+            if percent > 0:
+                autotext.set_text(f'{percent:.0f}%')
+                autotext.set_horizontalalignment('center')
+                autotext.set_verticalalignment('center')
+                autotext.set_fontsize(26)
+                autotext.set_fontweight('bold')
+                # Contrast check
+                lum = mcolors.to_grayscale(colors[i])
+                autotext.set_color('white' if lum < 0.5 else 'black')
+
+        ax_wagon.axis('equal')
+
+        # --- Plotting Part 2: Strike Rate Bar Chart ---
+        y_pos = np.arange(len(all_areas))
+        ax_sr.barh(y_pos, wagon_summary["SR"], color='#ff5000', edgecolor='black', height=0.6)
+        ax_sr.set_yticks(y_pos)
+        ax_sr.set_yticklabels(all_areas, fontsize=14, fontweight='bold')
+        ax_sr.set_title(f"STRIKE RATE BY AREA v {delivery_type.upper()}", fontsize=20, fontweight='bold', pad=20)
+        ax_sr.invert_yaxis()
         
+        for i, v in enumerate(wagon_summary["SR"]):
+            ax_sr.text(v + 3, i, f'{v:.0f}', va='center', fontsize=16, fontweight='bold')
+            
+        ax_sr.spines[['top', 'right', 'bottom']].set_visible(False)
+        ax_sr.xaxis.set_visible(False)
+
+    except Exception as e:
+        fig.clf()
+        ax = fig.add_subplot(111)
+        ax.text(0.5, 0.5, f"Error generating chart: {e}", ha='center', va='center')
+        ax.axis('off')
+
+    return fig        
         # === CRITICAL FIX: CENTERING PERCENTAGE LABELS AND STYLING ===
         for i, autotext in enumerate(autotexts):
             if i >= len(run_percentages): break
