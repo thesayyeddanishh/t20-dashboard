@@ -122,26 +122,16 @@ def create_Spinner_pitch_map(df_in):
     
     return fig
 
-# --- CHART 2b: PITCH LENGTH METRICS
-# --- Helper function for Pitch Bins (Hardcoded for spin) ---
-def get_spinner_pitch_bins():
-    return {
-         "OP": [-2, 2.8],
-        "Full": [2.8, 4.4],
-        "Good": [4.4, 6.2],
-        "Short": [6.2, 15.0]
-    }
 def create_Spinner_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
     FIG_SIZE = (6, 12) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, "No Data for Pacer Pitch Length Comparison", ha='center', va='center', fontsize=12)
+        ax.text(0.5, 0.5, "No Data for Spinner Pitch Length Comparison", ha='center', va='center', fontsize=12)
         ax.axis('off')
         return fig
 
-    # Get the pitch bins and define order (Fixed for Pacer)
     PITCH_BINS_DICT = get_spinner_pitch_bins()
     ordered_keys = ["OP", "Full", "Good" , "Short"]
     
@@ -154,59 +144,82 @@ def create_Spinner_pitch_length_bars(df_in):
     df_pitch = df_in.copy()
     df_pitch["PitchLength"] = df_pitch["BounceX"].apply(assign_pitch_length)
     
-    # Aggregate data for White Ball metrics
+    # Aggregate data (Includes Wickets, Runs, and Balls for new metrics)
     df_summary = df_pitch.groupby("PitchLength").agg(
         Runs=("Runs", "sum"), 
         Wickets=("Wicket", lambda x: (x == True).sum()), 
-        Balls=("Wicket", "count"),
-        Dots=("Runs", lambda x: (x == 0).sum())
+        Balls=("Wicket", "count")
     ).reset_index().set_index("PitchLength").reindex(ordered_keys).fillna(0)
     
-    # White Ball Calculations
+    # --- UPDATED CALCULATIONS ---
     df_summary["Economy"] = df_summary.apply(lambda row: (row["Runs"] / row["Balls"] * 6) if row["Balls"] > 0 else 0.0, axis=1)
-    df_summary["Dismissals"] = df_summary["Wickets"]
-    df_summary["Dot%"] = df_summary.apply(lambda row: (row["Dots"] / row["Balls"] * 100) if row["Balls"] > 0 else 0.0, axis=1)
+    
+    # Bowling Strike Rate (Balls per Wicket)
+    df_summary["SR"] = df_summary.apply(
+        lambda row: row["Balls"] / row["Wickets"] if row["Wickets"] > 0 else row["Balls"], axis=1
+    )
+    
+    # Bowling Average (Runs per Wicket)
+    df_summary["Avg"] = df_summary.apply(
+        lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else row["Runs"], axis=1
+    )
     
     # Categories for plotting (reversed for barh)
     categories = df_summary.index.tolist()[::-1]
     
     # 2. Chart Setup (3 Rows, 1 Column)
     fig, axes = plt.subplots(3, 1, figsize=FIG_SIZE, sharey=True) 
-    plt.subplots_adjust(hspace=5) 
+    plt.subplots_adjust(hspace=0.5) # Adjusted to 0.5 for reasonable spacing
 
-    # --- Metrics and Titles (Order: Economy, Dismissals, Dot%) ---
-    metrics = ["Economy", "Dismissals", "Dot%"]
-    titles = ["Economy", "Dismissals", "Dot %"]
-
+    # --- UPDATED ORDER: Economy, SR, Avg ---
+    metrics = ["Economy", "SR", "Avg"]
+    
     # Dynamic limits for scaling
     max_eco = df_summary["Economy"].max() * 1.2 if df_summary["Economy"].max() > 0 else 12
-    max_wkts = df_summary["Dismissals"].max() * 1.5 if df_summary["Dismissals"].max() > 0 else 5
+    max_sr = df_summary["SR"].max() * 1.2 if df_summary["SR"].max() > 0 else 40
+    max_avg = df_summary["Avg"].max() * 1.2 if df_summary["Avg"].max() > 0 else 50
     
     xlim_limits = {
         "Economy": (0, max_eco),
-        "Dismissals": (0, max_wkts),
-        "Dot%": (0, 100)
+        "SR": (0, max_sr),
+        "Avg": (0, max_avg)
     }
 
     # --- Plotting Loop ---
     for i, ax in enumerate(axes):
         metric = metrics[i]
-        title = titles[i]
         
-        values = df_summary[metric].values[::-1] 
+        # Reverse the summary to match reversed categories
+        df_rev = df_summary.iloc[::-1]
+        values = df_rev[metric].values 
         ax.set_xlim(xlim_limits[metric])
         
         # Horizontal Bar Chart
         ax.barh(categories, values, height=0.49, color='#ff5000', zorder=3, alpha=0.9)
         
-        # --- Annotations ---
-        for j, (cat, val) in enumerate(zip(categories, values)):
-            if metric == "Dismissals":
-                label = f"{int(val)}"
-            elif metric == "Dot%":
-                label = f"{val:.0f}%"
-            else: # Economy
+        # --- DYNAMIC TITLES ---
+        if metric == "SR":
+            title = "Balls" if df_summary["Wickets"].sum() == 0 else "Bowling Strike Rate (SR)"[cite: 1]
+        elif metric == "Avg":
+            title = "Runs" if df_summary["Wickets"].sum() == 0 else "Bowling Average (Avg)"[cite: 1]
+        else:
+            title = "Economy"
+            
+        ax.set_title(title, fontsize=12, fontweight='bold', pad=0, loc='left')[cite: 1]
+        
+        # --- DYNAMIC ANNOTATIONS (The R and B Trick) ---
+        for j, (idx, row) in enumerate(df_rev.iterrows()):
+            val = row[metric]
+            wickets = row["Wickets"]
+            
+            if metric == "Economy":
                 label = f"{val:.1f}"
+            elif metric == "SR":
+                # If no wickets, show total Balls + B
+                label = f"{int(row['Balls'])} B" if wickets == 0 else f"{val:.1f}"[cite: 1]
+            elif metric == "Avg":
+                # If no wickets, show total Runs + R
+                label = f"{int(row['Runs'])} R" if wickets == 0 else f"{val:.1f}"[cite: 1]
             
             ax.text(val, j, label, 
                     ha='left', va='center', 
@@ -215,7 +228,6 @@ def create_Spinner_pitch_length_bars(df_in):
                     zorder=4)
 
         # --- Formatting ---
-        ax.set_title(title, fontsize=12, fontweight='bold', pad=0, loc='left')
         ax.set_facecolor('white')
         ax.tick_params(axis='x', labelsize=8)
         ax.tick_params(axis='y', length=0) 
@@ -237,7 +249,6 @@ def create_Spinner_pitch_length_bars(df_in):
             
     plt.tight_layout(pad=0.5)
     return fig
-
 # =========================================================
 # Chart 1: CREASE BEEHIVE 
 # ========================================================
