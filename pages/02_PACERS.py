@@ -90,9 +90,9 @@ def create_pacer_pitch_map(df_in):
     )
     
     # --- 2. Add Stump lines (Vertical Lines) ---
-    ax.axvline(x=-0.18, color="#777777", linestyle="-", linewidth=0.8)
-    ax.axvline(x=0.18, color="#777777", linestyle="-", linewidth=0.8)
-    ax.axvline(x=0, color="#777777", linestyle="-", linewidth=0.8)
+    ax.axvline(x=-0.18, color="#777777", linestyle="-", linewidth=0.5)
+    ax.axvline(x=0.18, color="#777777", linestyle="-", linewidth=0.5)
+    ax.axvline(x=0, color="#777777", linestyle="-", linewidth=0.5)
     
     # --- 4. Layout (Axis and Spines) ---
     
@@ -133,7 +133,7 @@ def get_pacer_pitch_bins():
     }
 def create_pacer_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
-    FIG_SIZE = (6, 10) 
+    FIG_SIZE = (6, 12) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
