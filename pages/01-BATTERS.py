@@ -789,66 +789,66 @@ def create_wagon_wheel(df_in, delivery_type):
 
     try:
         # 1. Data Preparation (Must be indented 8 spaces from the left)
-        df_wagon = df_in.copy()[cite: 1]
-        df_wagon["ScoringWagon"] = df_wagon.apply(calculate_scoring_wagon, axis=1)[cite: 1]
-        df_wagon["FixedAngle"] = df_wagon["ScoringWagon"].apply(calculate_scoring_angle)[cite: 1]
+        df_wagon = df_in.copy()
+        df_wagon["ScoringWagon"] = df_wagon.apply(calculate_scoring_wagon, axis=1)
+        df_wagon["FixedAngle"] = df_wagon["ScoringWagon"].apply(calculate_scoring_angle)
         
         summary_with_shots = df_wagon.groupby("ScoringWagon").agg(
             TotalRuns=("Runs", "sum"), 
             Balls=("Runs", "count"),
             FixedAngle=("FixedAngle", 'first')
-        ).reset_index().dropna(subset=["ScoringWagon"])[cite: 1]
+        ).reset_index().dropna(subset=["ScoringWagon"])
         
         # 2. Handedness & Area Logic
-        handedness_mode = df_in["IsBatsmanRightHanded"].dropna().mode()[cite: 1]
-        is_right_handed = handedness_mode.iloc[0] if not handedness_mode.empty else True[cite: 1]
+        handedness_mode = df_in["IsBatsmanRightHanded"].dropna().mode()
+        is_right_handed = handedness_mode.iloc[0] if not handedness_mode.empty else True
         
-        all_areas = ["FINE LEG", "SQUARE LEG", "LONG ON", "LONG OFF", "COVER", "THIRD MAN"] if is_right_handed else ["THIRD MAN", "COVER", "LONG OFF", "LONG ON", "SQUARE LEG", "FINE LEG"][cite: 1]
+        all_areas = ["FINE LEG", "SQUARE LEG", "LONG ON", "LONG OFF", "COVER", "THIRD MAN"] if is_right_handed else ["THIRD MAN", "COVER", "LONG OFF", "LONG ON", "SQUARE LEG", "FINE LEG"]
             
         template_df = pd.DataFrame({
             "ScoringWagon": all_areas, 
             "FixedAngle": [calculate_scoring_angle(area) for area in all_areas]
-        })[cite: 1]
+        })
 
-        wagon_summary = template_df.merge(summary_with_shots.drop(columns=["FixedAngle"], errors='ignore'), on="ScoringWagon", how="left").fillna(0)[cite: 1]
-        wagon_summary["RunPercentage"] = (wagon_summary["TotalRuns"] / wagon_summary["TotalRuns"].sum() * 100).fillna(0)[cite: 1]
-        wagon_summary["SR"] = (wagon_summary["TotalRuns"] / wagon_summary["Balls"] * 100).fillna(0)[cite: 1]
+        wagon_summary = template_df.merge(summary_with_shots.drop(columns=["FixedAngle"], errors='ignore'), on="ScoringWagon", how="left").fillna(0)
+        wagon_summary["RunPercentage"] = (wagon_summary["TotalRuns"] / wagon_summary["TotalRuns"].sum() * 100).fillna(0)
+        wagon_summary["SR"] = (wagon_summary["TotalRuns"] / wagon_summary["Balls"] * 100).fillna(0)
 
         # 3. Plot Part 1: Wagon Wheel (ax_wagon)
-        angles = wagon_summary["FixedAngle"].tolist()[cite: 1]
-        wagon_summary['Rank'] = wagon_summary['RunPercentage'].rank(method='dense', ascending=False)[cite: 1]
-        colors = ['#ff5000' if (r == 1 and p > 0) else 'white' for r, p in zip(wagon_summary['Rank'], wagon_summary['RunPercentage'])][cite: 1]
+        angles = wagon_summary["FixedAngle"].tolist()
+        wagon_summary['Rank'] = wagon_summary['RunPercentage'].rank(method='dense', ascending=False)
+        colors = ['#ff5000' if (r == 1 and p > 0) else 'white' for r, p in zip(wagon_summary['Rank'], wagon_summary['RunPercentage'])]
 
         wedges, texts, autotexts = ax_wagon.pie(
             angles, colors=colors, wedgeprops={"width": 1, "edgecolor": "black"}, 
             startangle=90, counterclock=False, pctdistance=0.6
-        )[cite: 1]
+        )
 
         # 4. Styling Text with Contrast Logic
         for i, autotext in enumerate(autotexts):
             if wagon_summary["RunPercentage"].iloc[i] > 0:
-                autotext.set_text(f'{wagon_summary["RunPercentage"].iloc[i]:.0f}%')[cite: 1]
-                autotext.set_fontsize(26); autotext.set_fontweight('bold')[cite: 1]
-                rgb = mcolors.to_rgb(colors[i])[cite: 1]
-                lum = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2][cite: 1]
-                autotext.set_color('white' if lum < 0.5 else 'black')[cite: 1]
+                autotext.set_text(f'{wagon_summary["RunPercentage"].iloc[i]:.0f}%')
+                autotext.set_fontsize(26); autotext.set_fontweight('bold')
+                rgb = mcolors.to_rgb(colors[i])
+                lum = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+                autotext.set_color('white' if lum < 0.5 else 'black')
             else:
-                autotext.set_text('')[cite: 1]
+                autotext.set_text('')
 
-        ax_wagon.set_title("RUNS DISTRIBUTION (%)", fontsize=20, fontweight='bold', pad=20)[cite: 1]
-        ax_wagon.axis('equal')[cite: 1]
+        ax_wagon.set_title("RUNS DISTRIBUTION (%)", fontsize=20, fontweight='bold', pad=20)
+        ax_wagon.axis('equal')
 
         # 5. Plot Part 2: Strike Rate (ax_sr)
-        y_pos = np.arange(len(all_areas))[cite: 1]
-        ax_sr.barh(y_pos, wagon_summary["SR"], color='#ff5000', edgecolor='black', height=0.6)[cite: 1]
-        ax_sr.set_yticks(y_pos); ax_sr.set_yticklabels(all_areas, fontsize=14, fontweight='bold')[cite: 1]
-        ax_sr.invert_yaxis()[cite: 1]
-        ax_sr.spines[['top', 'right', 'bottom']].set_visible(False); ax_sr.xaxis.set_visible(False)[cite: 1]
+        y_pos = np.arange(len(all_areas))
+        ax_sr.barh(y_pos, wagon_summary["SR"], color='#ff5000', edgecolor='black', height=0.6)
+        ax_sr.set_yticks(y_pos); ax_sr.set_yticklabels(all_areas, fontsize=14, fontweight='bold')
+        ax_sr.invert_yaxis()
+        ax_sr.spines[['top', 'right', 'bottom']].set_visible(False); ax_sr.xaxis.set_visible(False)
 
     except Exception as e:
         # If ax_wagon is already defined, we can use it to show the error
-        ax_wagon.text(0.5, 0.5, f"Error: {e}", ha='center', va='center')[cite: 1]
-        ax_wagon.axis('off')[cite: 1]
+        ax_wagon.text(0.5, 0.5, f"Error: {e}", ha='center', va='center')
+        ax_wagon.axis('off')
 
     return fig        
 
