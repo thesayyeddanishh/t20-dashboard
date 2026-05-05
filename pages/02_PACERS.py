@@ -133,7 +133,7 @@ def get_pacer_pitch_bins():
     }
 def create_pacer_pitch_length_bars(df_in):
     # Fixed size to accommodate three stacked charts comfortably
-    FIG_SIZE = (2.5, 6) 
+    FIG_SIZE = (5, 3) 
     
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
