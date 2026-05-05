@@ -779,7 +779,7 @@ def create_wagon_wheel(df_in, delivery_type):
 
     if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, f"No Data for {delivery_type} Analysis", ha='center', va='center', fontsize=12)
+        ax.text(0.5, 0.5, f"No Data for {delivery_type} Analysis", ha='center', va='center', fontsize=8)
         ax.axis('off')
         return fig
 
@@ -915,37 +915,50 @@ def create_speed_metrics_bar(df_in, delivery_type):
     summary = df_temp.groupby("SpeedGroup").agg(
         Runs=("Runs", "sum"), 
         Balls=("Runs", "count"),
-        Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum())
+        # Count dismissals where the wicket column is not null or based on your specific 'isOut' column
+        Dismissals=("isWicket", "sum") 
     ).reindex(ordered_groups).fillna(0)
     
+    # Calculations
     summary["SR"] = (summary["Runs"] / summary["Balls"] * 100).fillna(0)
-    summary["BPct"] = (summary["Boundaries"] / summary["Balls"] * 100).fillna(0)
+    # Average = Runs / Dismissals (handle division by zero if not out)
+    summary["Avg"] = (summary["Runs"] / summary["Dismissals"]).replace([np.inf, -np.inf], summary["Runs"]).fillna(0)
 
-    # 4. Plotting
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6, 4), sharey=True)
-    plt.subplots_adjust(wspace=0.6) 
+    # 4. Plotting - Changed to 1 row, 4 columns
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(12, 4), sharey=True)
+    plt.subplots_adjust(wspace=0.8) 
     
     y = np.arange(len(ordered_groups))
     height = 0.6
 
-    # --- Column 1: Strike Rate ---
-    ax1.barh(y, summary["SR"], color='#ff5000', edgecolor='black', height=height)
-    ax1.set_title("Strike Rate", fontsize=14, fontweight='bold')
+    # --- Column 1: Runs ---
+    ax1.barh(y, summary["Runs"], color='#ff5000', edgecolor='black', height=height)
+    ax1.set_title("Runs", fontsize=12, fontweight='bold')
     ax1.set_yticks(y)
-    ax1.set_yticklabels(ordered_groups, fontsize=12, fontweight='bold')
-    
+    ax1.set_yticklabels(ordered_groups, fontsize=11, fontweight='bold')
+    for i, v in enumerate(summary["Runs"]):
+        ax1.text(v + 1, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=10)
+
+    # --- Column 2: Dismissals ---
+    ax2.barh(y, summary["Dismissals"], color='#ff5000', edgecolor='black', height=height)
+    ax2.set_title("Outs", fontsize=12, fontweight='bold')
+    for i, v in enumerate(summary["Dismissals"]):
+        ax2.text(v + 0.1, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=10)
+
+    # --- Column 3: Average ---
+    ax3.barh(y, summary["Avg"], color='#ff5000', edgecolor='black', height=height)
+    ax3.set_title("Avg", fontsize=12, fontweight='bold')
+    for i, v in enumerate(summary["Avg"]):
+        ax3.text(v + 1, i, f'{v:.1f}', va='center', fontweight='bold', fontsize=10)
+
+    # --- Column 4: Strike Rate ---
+    ax4.barh(y, summary["SR"], color='#ff5000', edgecolor='black', height=height)
+    ax4.set_title("SR", fontsize=12, fontweight='bold')
     for i, v in enumerate(summary["SR"]):
-        ax1.text(v + 3, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=12)
+        ax4.text(v + 3, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=10)
 
-    # --- Column 2: Boundary % ---
-    ax2.barh(y, summary["BPct"], color='#ff5000', edgecolor='black', height=height)
-    ax2.set_title("Boundary %", fontsize=14, fontweight='bold')
-    
-    for i, v in enumerate(summary["BPct"]):
-        ax2.text(v + 1, i, f'{v:.1f}%', va='center', fontweight='bold', fontsize=12)
-
-    # Formatting
-    for ax in [ax1, ax2]:
+    # Formatting Cleanup
+    for ax in [ax1, ax2, ax3, ax4]:
         ax.spines[['top', 'right', 'bottom']].set_visible(False)
         ax.xaxis.set_visible(False)
         ax.invert_yaxis() 
