@@ -890,8 +890,8 @@ def create_wagon_wheel(df_in, delivery_type):
                 autotext.set_verticalalignment('center')
                 
                 # Add a white stroke (outline) for text visibility
-            else:
-                autotext.set_text('')
+        else:
+            autotext.set_text('')
                 
             # 2. Set text color based on background color for contrast
             color_rgb = mcolors.to_rgb(colors[i])
@@ -917,8 +917,8 @@ def create_speed_metrics_bar(df_in, delivery_type):
             if speed < 125: return "<125"
             elif 125 <= speed <= 140: return "125-140"
             else: return "140+"
-        else: # Spin logic
-        if speed < 85: return "<85"
+    else: # Spin logic
+            if speed < 85: return "<85"
             elif 85 <= speed <= 95: return "85-95"
             else: return "95+"
 
