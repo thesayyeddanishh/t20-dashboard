@@ -738,19 +738,26 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     df_temp = df_temp.dropna(subset=["ReleaseSpeed"])
     df_temp["SpeedGroup"] = df_temp["ReleaseSpeed"].apply(assign_speed_group)
     
-    # 2. Aggregate Data
+    # 2. Aggregate Data (Updated to include Wickets)
     ordered_groups = ["<125", "125-140", "140+"]
     summary = df_temp.groupby("SpeedGroup").agg(
         Runs=("Runs", "sum"), 
         Balls=("Runs", "count"),
-        Dots=("Runs", lambda x: (x == 0).sum()),
-        Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum())
+        Wickets=("Wicket", lambda x: (x == True).sum()) # Added for SR and Avg
     ).reindex(ordered_groups).fillna(0)
     
-    # White Ball Metrics
+    # --- UPDATED: White Ball Metrics (Eco, SR, Avg) ---
     summary["Eco"] = (summary["Runs"] / summary["Balls"] * 6).fillna(0)
-    summary["Bd%"] = (summary["Boundaries"] / summary["Balls"] * 100).fillna(0)
-    summary["Dot%"] = (summary["Dots"] / summary["Balls"] * 100).fillna(0)
+    
+    # Bowling Strike Rate: Balls per Wicket
+    summary["SR"] = summary.apply(
+        lambda row: row["Balls"] / row["Wickets"] if row["Wickets"] > 0 else row["Balls"], axis=1
+    )
+    
+    # Bowling Average: Runs per Wicket
+    summary["Avg"] = summary.apply(
+        lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else row["Runs"], axis=1
+    )
 
     # 3. Plotting (1 row, 3 columns)
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(9, 2.89), sharey=True)
@@ -760,25 +767,31 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     height = 0.5
     color_pacer = '#ff5000'
 
-    # --- Column 1: Boundary % ---
-    ax1.barh(y, summary["Bd%"], color=color_pacer, edgecolor='white', height=height)
-    ax1.set_title("Bd %", fontsize=12, fontweight='bold')
+    # --- Column 1: Economy ---
+    ax1.barh(y, summary["Eco"], color=color_pacer, edgecolor='white', height=height)
+    ax1.set_title("Economy", fontsize=12, fontweight='bold')
     ax1.set_yticks(y)
     ax1.set_yticklabels(ordered_groups, fontsize=11, fontweight='bold')
-    for i, v in enumerate(summary["Bd%"]):
-        ax1.text(v + 1, i, f'{v:.0f}%', va='center', fontweight='bold', fontsize=10)
-
-    # --- Column 2: Economy ---
-    ax2.barh(y, summary["Eco"], color=color_pacer, edgecolor='white', height=height)
-    ax2.set_title("Economy", fontsize=12, fontweight='bold')
     for i, v in enumerate(summary["Eco"]):
-        ax2.text(v + 0.2, i, f'{v:.1f}', va='center', fontweight='bold', fontsize=10)
+        ax1.text(v + 0.2, i, f'{v:.1f}', va='center', fontweight='bold', fontsize=10)
 
-    # --- Column 3: Dot % ---
-    ax3.barh(y, summary["Dot%"], color=color_pacer, edgecolor='white', height=height)
-    ax3.set_title("Dot %", fontsize=12, fontweight='bold')
-    for i, v in enumerate(summary["Dot%"]):
-        ax3.text(v + 1, i, f'{v:.0f}%', va='center', fontweight='bold', fontsize=10)
+    # --- Column 2: Bowling Strike Rate (SR) / Balls ---
+    ax2.barh(y, summary["SR"], color=color_pacer, edgecolor='white', height=height)
+    ax2.set_title("SR", fontsize=12, fontweight='bold')
+    for i, (idx, row) in enumerate(summary.iterrows()):
+        val = row["SR"]
+        # If no wickets, display total balls as an integer
+        label = f"{int(row['Balls'])} B" if row["Wickets"] == 0 else f"{val:.1f}"[cite: 1]
+        ax2.text(val + 1, i, label, va='center', fontweight='bold', fontsize=10)
+
+    # --- Column 3: Bowling Average (Avg) / Runs ---
+    ax3.barh(y, summary["Avg"], color=color_pacer, edgecolor='white', height=height)
+    ax3.set_title("Avg", fontsize=12, fontweight='bold')
+    for i, (idx, row) in enumerate(summary.iterrows()):
+        val = row["Avg"]
+        # If no wickets, display total runs as an integer
+        label = f"{int(row['Runs'])} R" if row["Wickets"] == 0 else f"{val:.1f}"[cite: 1]
+        ax3.text(val + 1, i, label, va='center', fontweight='bold', fontsize=10)
 
     # Formatting
     for ax in [ax1, ax2, ax3]:
