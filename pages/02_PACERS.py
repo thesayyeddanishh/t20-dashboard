@@ -1035,14 +1035,12 @@ with col_rhb:
     # st.pyplot(create_pacer_lateral_performance_boxes(df_rhb, "RHB"), use_container_width=True)
     
 
-     # Chart 4/5: RELEASE
-    pace_col, release_col = st.columns([2, 2])
-    with pace_col:
-        st.markdown("###### RELEASE SPEED v RHB")
-        st.pyplot(create_pacer_release_speed_distribution(df_rhb, "RHB"), use_container_width=True)
-    with release_col:
-        st.markdown("###### RELEASE v RHB")
-        st.pyplot(create_pacer_release_analysis(df_rhb, "RHB"), use_container_width=True)
+    # Chart 4/5: RELEASE
+    st.markdown("###### RELEASE SPEED v RHB")
+    st.pyplot(create_pacer_release_speed_distribution(df_rhb, "RHB"), use_container_width=True)
+        
+    st.markdown("###### RELEASE v RHB")
+    st.pyplot(create_pacer_release_analysis(df_rhb, "RHB"), use_container_width=True)
     
     # Chart 16: Speed Distribution - Death Overs
     st.markdown("###### SPEED DISTRIBUTION METRICS")
