@@ -715,40 +715,48 @@ ax_bar.set_xlim(0, 1)
 ax_bar.set_ylim(0, 1) 
 ax_bar.axis('off')
 
-    # ----------------------------------------------------------------------
-    ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
+# ----------------------------------------------------------------------
+    # ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
     # ----------------------------------------------------------------------
     
-plt.tight_layout(pad=0.2) 
-    
-    PADDING = 0.005 
+    plt.tight_layout(pad=0.5) # Increased slightly to prevent label clipping
 
-    # Get the bounding box of the top (scatter) and bottom (bar) charts
+    # Define a clean, uniform padding value (in figure fraction)
+    # 0.01 to 0.015 is usually the "sweet spot" for a professional look
+    PADDING_X = 0.012
+    PADDING_Y = 0.015 
+
+    # 1. Get the bounding boxes of the top and bottom charts
     scatter_bbox = ax_scatter.get_position()
     bar_bbox = ax_bar.get_position() 
-    # Determine the total bounds (figure coordinates)
-    x0_orig = scatter_bbox.x0         
-    y0_orig = bar_bbox.y0  
-    x1_orig = scatter_bbox.x1     
-    y1_orig = scatter_bbox.y1         
-    
-    # Apply Padding
-    x0_pad = x0_orig - PADDING
-    y0_pad = y0_orig - PADDING
-    
-    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
-    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
 
-    # Draw the custom Rectangle 
+    # 2. Determine the outermost coordinates
+    # We take the minimum left/bottom and maximum right/top
+    x0 = min(scatter_bbox.x0, bar_bbox.x0)
+    y0 = min(scatter_bbox.y0, bar_bbox.y0)
+    x1 = max(scatter_bbox.x1, bar_bbox.x1)
+    y1 = max(scatter_bbox.y1, bar_bbox.y1)
+    
+    # 3. Calculate Padded Dimensions
+    # We shift the origin (x0, y0) down and left
+    rect_x = x0 - PADDING_X
+    rect_y = y0 - PADDING_Y
+    
+    # The width/height must account for padding on BOTH sides
+    rect_width = (x1 - x0) + (2 * PADDING_X)
+    rect_height = (y1 - y0) + (2 * PADDING_Y)
+
+    # 4. Draw the Rectangle
     border_rect = patches.Rectangle(
-        (x0_pad-0.008, y0_pad+0.02), 
-        width_pad+0.017, 
-        height_pad,  
+        (rect_x, rect_y), 
+        rect_width, 
+        rect_height,  
         facecolor='none', 
         edgecolor='black', 
-        linewidth=0.5, 
+        linewidth=0.8, # Slightly thicker for a "frame" feel
         transform=fig.transFigure, 
-        clip_on=False
+        clip_on=False,
+        zorder=0 # Ensure it stays behind any data points if they overlap
     )
 
     fig.patches.append(border_rect)
