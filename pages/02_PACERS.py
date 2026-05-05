@@ -568,7 +568,7 @@ def create_pacer_release_speed_distribution(df_in, handedness_label):
 
 # Chart 5 Bowler Release Map
 def create_pacer_release_analysis(df_in, handedness_label): 
-    FIG_SIZE = (3, 3.4) # Increased height for both charts
+    FIG_SIZE = (3, 3) # Increased height for both charts
 
     if df_in.empty or "ReleaseY" not in df_in.columns or "ReleaseZ" not in df_in.columns:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -621,7 +621,7 @@ def create_pacer_release_analysis(df_in, handedness_label):
 
     # --- 2. Setup Figure and GridSpec ---
     fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
-    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1.2], hspace=0.1)
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.1)
     
     ax_map = fig.add_subplot(gs[0, 0])
     ax_metrics = fig.add_subplot(gs[1, 0])
@@ -670,17 +670,17 @@ def create_pacer_release_analysis(df_in, handedness_label):
 
     # Titles
     # Metric Labels (Left Alignment for labels)
-    ax_metrics.text(0.05, 1, "W:", ha='right', va='center', fontsize=10, fontweight='bold')
-    ax_metrics.text(0.05, 0.5, "Avg:", ha='right', va='center', fontsize=10, fontweight='bold')
-    ax_metrics.text(0.05, 0, "SR:", ha='right', va='center', fontsize=10, fontweight='bold')
+    ax_metrics.text(0.05, 1, "W:", ha='right', va='center', fontsize=5, fontweight='bold')
+    ax_metrics.text(0.05, 0.5, "Avg:", ha='right', va='center', fontsize=5, fontweight='bold')
+    ax_metrics.text(0.05, 0, "SR:", ha='right', va='center', fontsize=5, fontweight='bold')
 
     # LEFT Values
-    ax_metrics.text(0.2, 1, format_metric(left["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    ax_metrics.text(0.2, 0.5, format_metric(left["BA"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
-    ax_metrics.text(0.2, 0, format_metric(left["SR"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.2, 1, format_metric(left["Wickets"], is_wickets=True), ha='center', va='center', fontsize=8, color='red', fontweight='bold')
+    ax_metrics.text(0.2, 0.5, format_metric(left["BA"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
+    ax_metrics.text(0.2, 0, format_metric(left["SR"]), ha='center', va='center', fontsize=8, color='black', fontweight='bold')
 
     # RIGHT Values
-    ax_metrics.text(0.9, 1, format_metric(right["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.9, 1, format_metric(right["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='red', fontweight='bold')
     ax_metrics.text(0.9, 0.5, format_metric(right["BA"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
     ax_metrics.text(0.9, 0, format_metric(right["SR"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
     
@@ -711,7 +711,7 @@ def create_pacer_release_analysis(df_in, handedness_label):
 # Chart 11: Speed Effectiveness
 def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     if df_in.empty:
-        fig, ax = plt.subplots(figsize=(6, 1))
+        fig, ax = plt.subplots(figsize=(5, 3))
         ax.text(0.5, 0.5, "No Data", ha='center', va='center')
         ax.axis('off')
         return fig
@@ -719,9 +719,11 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     # 1. Define Speed Groups
     def assign_speed_group(speed):
         if speed < 125:
-            return "Slower (<125)"
+            return "<125"
+        elif 125 <= speed <= 140:
+            return "125-140"
         else:
-            return "Pace On (>125)"
+            return "140+"
 
     df_temp = df_in.copy()
     df_temp["ReleaseSpeed"] = pd.to_numeric(df_temp["ReleaseSpeed"], errors='coerce')
@@ -729,7 +731,7 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     df_temp["SpeedGroup"] = df_temp["ReleaseSpeed"].apply(assign_speed_group)
     
     # 2. Aggregate Data
-    ordered_groups = ["Slower (<125)", "Pace On (>125)"]
+    ordered_groups = ["<125", "125-140", "140+"]
     summary = df_temp.groupby("SpeedGroup").agg(
         Runs=("Runs", "sum"), 
         Balls=("Runs", "count"),
