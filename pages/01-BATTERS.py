@@ -727,69 +727,6 @@ def create_interception_side_on(df_in, delivery_type):
     fig.patches.append(border_rect)
 
     return fig
-
-
-    
-# --- CHART 5: INTERCEPTION FRONT-ON --- (Distance vs Width)
-def create_interception_front_on(df_in, delivery_type):
-    df_interception = df_in[df_in["InterceptionX"] > -999].copy()
-    if df_interception.empty:
-        fig, ax = plt.subplots(figsize=(4, 6)); ax.text(0.5, 0.5, "No Data", ha='center', va='center'); ax.axis('off'); return fig
-        
-    df_interception["ColorType"] = "Other"
-    df_interception.loc[df_interception["Wicket"] == True, "ColorType"] = "Wicket"
-    df_interception.loc[df_interception["Runs"].isin([4, 6]), "ColorType"] = "Boundary"
-    # Define color_map inline as it's needed for the loop
-    color_map = {"Wicket": "red", "Boundary": "royalblue", "Other": "white"}
-    
-    fig_8, ax_8 = plt.subplots(figsize=(4, 6), subplot_kw={'xticks': [], 'yticks': []}) 
-
-    # 1. Plot Data
-    # Plot "Other" (White with Grey Border)
-    df_other = df_interception[df_interception["ColorType"] == "Other"]
-    # === USING PROVIDED LOGIC: PLOT (InterceptionX + 10) on Y-axis (Distance) ===
-    ax_8.scatter(
-        df_other["InterceptionY"], df_other["InterceptionX"] + 10, 
-        color='#D3D3D3', edgecolors='white', linewidths=0.5, s=70, label="Other"
-    ) 
-    
-    # Plot "Wicket" and "Boundary" (Solid colors)
-    for ctype in ["Boundary", "Wicket"]:
-        df_slice = df_interception[df_interception["ColorType"] == ctype]
-        # === USING PROVIDED LOGIC: PLOT (InterceptionX + 10) on Y-axis (Distance) ===
-        ax_8.scatter(
-            df_slice["InterceptionY"], df_slice["InterceptionX"] + 10, 
-            color=color_map[ctype],edgecolors='white', s=90, label=ctype
-        ) 
-
-    # 2. Draw Horizontal Dashed Lines with Labels (FIXED LINES: 0.0, 1.25)
-    line_specs = {
-        0.00: "Stumps",
-        1.25: "Crease"        
-    }
-    for y_val, label in line_specs.items():
-        ax_8.axhline(y=y_val, color='lightgrey', linestyle='--', linewidth=0.8, alpha=0.7)
-        ax_8.text(-0.95, y_val, label.split(':')[-1].strip(), ha='left', va='center', fontsize=12, color='grey', bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=1))
-
-    # Boundary lines (FIXED LINES: -0.18, 0.18)
-    ax_8.axvline(x=-0.18, color='grey', linestyle='--', linewidth=1, alpha=0.7)
-    ax_8.axvline(x= 0.18, color='grey', linestyle='--', linewidth=1, alpha=0.7)
-    ax_8.axvline(x= 0, color='grey', linestyle='--', linewidth=1, alpha=0.7)
-    
-    # 3. Set Axes Limits and Labels (FIXED LIMITS: Y-axis -0.2 to 3.5)
-    ax_8.set_xlim(-1, 1); ax_8.set_ylim(-0.2, 3.5); ax_8.invert_yaxis()      
-    ax_8.tick_params(axis='y', which='both', labelleft=False, left=False); ax_8.tick_params(axis='x', which='both', labelbottom=False, bottom=False)
-     # Hide axis spines (plot border)
-    # 1. Set line style for all spines you want visible
-    spine_color = 'black'
-    spine_width = 0.5
-    
-    for spine_name in ['left', 'top', 'bottom','right']:
-        ax_8.spines[spine_name].set_visible(True)
-        ax_8.spines[spine_name].set_color(spine_color)
-        ax_8.spines[spine_name].set_linewidth(spine_width)
-    plt.tight_layout(pad=0.5)
-    return fig_8
     
 
 # Chart 6 Scoring wagon wheel
@@ -966,356 +903,38 @@ def create_wagon_wheel(df_in, delivery_type):
         
         ax_wagon.axis('equal'); 
 
-# ----------------------------------------------------------------------
-    ## --- PART 2: CHART 7 - STRIKE RATE WAGON WHEEL (ax_split) ---
-    # ----------------------------------------------------------------------
-    sr_wagon_summary = pd.DataFrame()
-    try:
-        # Use the same data prepared for the previous wagon wheel
-        # Calculate Runs AND Balls (count of deliveries) per area
-        summary_sr = df_wagon.groupby("ScoringWagon").agg(
-            TotalRuns=("Runs", "sum"), 
-            TotalBalls=("Runs", "count"),
-            FixedAngle=("FixedAngle", 'first')
-        ).reset_index().dropna(subset=["ScoringWagon"])
-        
-        # Merge with template to ensure all areas are present
-        sr_wagon_summary = template_df.merge(summary_sr.drop(columns=["FixedAngle"], errors='ignore'), on="ScoringWagon", how="left").fillna(0)
-        sr_wagon_summary["ScoringWagon"] = pd.Categorical(sr_wagon_summary["ScoringWagon"], categories=all_areas, ordered=True)
-        sr_wagon_summary = sr_wagon_summary.sort_values("ScoringWagon")
-        
-        # Calculate Strike Rate (Text format, not %)
-        sr_wagon_summary["SR"] = sr_wagon_summary.apply(
-            lambda row: (row["TotalRuns"] / row["TotalBalls"]) * 100 if row["TotalBalls"] > 0 else 0, axis=1
-        )
-        
-        # Identify Rank for Coloring (Highest SR gets the color)
-        sr_wagon_summary['RankSR'] = sr_wagon_summary['SR'].rank(method='dense', ascending=False)
-        
-    except Exception as e:
-        ax_split.text(0.5, 0.5, f"SR Wagon Error: {e}", ha='center', va='center', fontsize=8)
-        ax_split.axis('off')
 
-    # --- Plotting the SR Wagon Wheel ---
-    sr_angles = sr_wagon_summary["FixedAngle"].tolist()
-    sr_values = sr_wagon_summary["SR"].tolist()
-    
-    if not sr_angles or all(a == 0 for a in sr_angles):
-        ax_split.text(0.5, 0.5, "No SR Data", ha='center', va='center', fontsize=14)
-        ax_split.axis('off')
-    else:
-        # Define Colors (Highlight only the #1 Highest SR)
-        sr_colors = [COLOR_HIGH if r == 1 and val > 0 else COLOR_DEFAULT for r, val in zip(sr_wagon_summary['RankSR'], sr_values)]
-
-        # Plot Pie
-        sr_pie = ax_split.pie(
-            sr_angles, 
-            colors=sr_colors, 
-            wedgeprops={"width": 1, "edgecolor": "black", "linewidth": 0.5}, 
-            startangle=90, 
-            counterclock=False
-        )
-        
-        # Add Strike Rate Text Labels
-        # Pie returns (wedges, texts) or (wedges, texts, autotexts)
-        # Since we aren't using autopct, we calculate label positions manually
-        for i, wedge in enumerate(sr_pie[0]):
-            sr_val = sr_values[i]
-            if sr_val > 0:
-                # Calculate mid-angle for text placement
-                angle = (wedge.theta2 + wedge.theta1) / 2.
-                x = 0.6 * np.cos(np.deg2rad(angle))
-                y = 0.6 * np.sin(np.deg2rad(angle))
-                
-                # Contrast check
-                color_rgb = mcolors.to_rgb(sr_colors[i])
-                lum = 0.2126 * color_rgb[0] + 0.7152 * color_rgb[1] + 0.0722 * color_rgb[2]
-                t_color = 'white' if lum < 0.5 and sr_colors[i] == COLOR_HIGH else 'black'
-                
-                ax_split.text(x, y, f"{sr_val:.0f}", ha='center', va='center', 
-                             fontsize=26, fontweight='bold', color=t_color)
-        ax_split.set_title("STRIKE RATE", fontsize=20, fontweight='bold', pad=0)
-        ax_split.axis('equal')
-    
-  
-
-# # --- CHART 9/10: DIRECTIONAL SPLIT (Side-by-Side Bars) ---
-def create_directional_split(df_in, direction_col, chart_title, delivery_type):
+# Updated Chart 12: Speed Effectiveness with Dynamic Brackets
+def create_speed_metrics_bar(df_in, delivery_type):
     if df_in.empty:
-        fig, ax = plt.subplots(figsize=(7, 12))
-        ax.text(0.5, 0.5, "No Data for Directional Analysis", ha='center', va='center')
-        ax.axis('off')
-        return fig
-
-    segments = [
-        ("OVERALL", (0, 20)),
-        ("POWERPLAY", (1, 6)),
-        ("DEATH OVERS", (16, 20))
-    ]
-    
-    fig, axes = plt.subplots(3, 1, figsize=(7, 12))
-    fig.patch.set_facecolor('white')
-    plt.subplots_adjust(hspace=0.6) 
-
-    for i, (seg_title, (o_start, o_end)) in enumerate(segments):
-        ax = axes[i]
-        df_seg = df_in[(df_in['Over'] >= o_start) & (df_in['Over'] <= o_end)].copy()
-        
-        if df_seg.empty:
-            ax.text(0.5, 0.5, f"No Data for {seg_title}", ha='center', va='center', fontsize=10)
-            ax.axis('off')
-            continue
-
-        df_seg["Direction"] = np.where(df_seg[direction_col] < 0, "LEFT", "RIGHT")
-        
-        summary = df_seg.groupby("Direction").agg(
-            Runs=("Runs", "sum"), 
-            Balls=("Wicket", "count"),
-            Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum()),
-            Dots=("Runs", lambda x: (x == 0).sum())
-        ).reset_index().set_index("Direction").reindex(["RIGHT", "LEFT"]).fillna(0)
-        
-        summary["SR"] = summary.apply(lambda r: (r["Runs"]/r["Balls"])*100 if r["Balls"] > 0 else 0, axis=1)
-        summary["BPct"] = summary.apply(lambda r: (r["Boundaries"]/r["Balls"])*100 if r["Balls"] > 0 else 0, axis=1)
-        summary["DotPct"] = summary.apply(lambda r: (r["Dots"]/r["Balls"])*100 if r["Balls"] > 0 else 0, axis=1)
-        
-        y_positions = [0, 1] 
-        sr_values = [summary.loc["RIGHT", "SR"], -summary.loc["LEFT", "SR"]] 
-        
-        ax.barh(y_positions, sr_values, color='#ff5000', edgecolor='black', linewidth=0.5, height=0.5)
-        
-        # 3. Add Labels (Modified Layout)
-        for idx, direction in enumerate(["RIGHT", "LEFT"]):
-            row = summary.loc[direction]
-            x_val = sr_values[idx]
-            ha = 'left' if x_val >= 0 else 'right'
-            offset = 10 if x_val >= 0 else -10
-            
-            # SR (Large)
-            ax.text(x_val + offset, idx + 0.12, f"{row['SR']:.0f}", 
-                    va='center', ha=ha, fontsize=18, fontweight='bold', color='#ff5000')
-            
-            # B% | Dot% (Small)
-            sub_stats = f"{row['BPct']:.0f}% | {row['DotPct']:.0f}%"
-            ax.text(x_val + offset, idx - 0.18, sub_stats, 
-                    va='center', ha=ha, fontsize=14, fontweight='bold', color='#000000')
-
-        # 4. Styling
-        ax.set_title(seg_title, fontsize=14, fontweight='bold', pad=15)
-        ax.axvline(0, color='black', linewidth=1)
-        ax.set_yticks([]) 
-        ax.set_yticklabels([])
-        ax.set_xlim(-320, 320) # Increased limit to accommodate larger font
-        
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        ax.tick_params(axis='both', which='both', bottom=False, labelbottom=False, left=False)
-
-    return fig
-
-
-# Chart : Pitchmap - death overs
-import matplotlib.pyplot as plt
-
-def create_pitch_map_death(df_in, delivery_type):
-    if df_in.empty:
-        # Create an empty figure with a text note if data is missing
-        fig, ax = plt.subplots(figsize=(4, 6))
-        ax.text(0.5, 0.5, f"No data for Pitch Map ({delivery_type})", ha='center', va='center', fontsize=12)
-        ax.axis('off')
-        return fig
-
-    # --- Data Filtering ---
-    # 1. Separate Wickets
-    pitch_wickets = df_in[df_in["Wicket"] == True]
-    
-    # 2. Separate Non-Wicket Boundaries (4s and 6s)
-    pitch_boundaries = df_in[(df_in["Wicket"] == False) & (df_in["Runs"].isin([4, 6]))]
-    
-    # 3. Separate Non-Wicket Others (0, 1, 2, 3 runs)
-    pitch_others = df_in[(df_in["Wicket"] == False) & (~df_in["Runs"].isin([4, 6]))]
-    
-    # --- Chart Setup ---
-    fig, ax = plt.subplots(figsize=(4, 6))
-    ax.set_facecolor('white')
-    fig.patch.set_facecolor('white')
-
-    # --- Pitch Bins & Zone Lines ---
-    PITCH_BINS = get_pitch_bins(delivery_type)
-    
-    # Draw horizontal zone lines
-    boundary_y_values = sorted([v[0] for v in PITCH_BINS.values() if v[0] > -4.0], reverse=True)
-    for y_val in boundary_y_values:
-        ax.axhline(y=y_val, color="lightgrey", linewidth=1.0, linestyle="--")
-
-    # Add zone labels on the far left
-    for length_label, bounds in PITCH_BINS.items():
-        mid_y = (bounds[0] + bounds[1]) / 2
-        ax.text(
-            x=-1.45, 
-            y=mid_y, 
-            s=length_label.upper(), 
-            ha='left', 
-            va='center', 
-            fontsize=8, 
-            color="grey", 
-            fontweight='bold'
-        )
-
-    # --- Plot Data (Scatter Traces) ---
-    
-    # 1. Others (Light Grey) - Plotted first to stay in background
-    ax.scatter(
-        pitch_others["BounceY"], pitch_others["BounceX"], 
-        s=60, 
-        c='#D3D3D3', 
-        edgecolor='white', 
-        linewidths=1.0, 
-        alpha=0.9,
-        label="Others"
-    )
-
-    # 2. Boundaries (Royal Blue) - New Category
-    ax.scatter(
-        pitch_boundaries["BounceY"], pitch_boundaries["BounceX"], 
-        s=70, 
-        c='#4169E1', # Royal Blue
-        edgecolor='white', 
-        linewidths=1.0, 
-        alpha=0.95,
-        label="Boundary"
-    )
-
-    # 3. Wickets (Red) - Plotted last to stay on top
-    ax.scatter(
-        pitch_wickets["BounceY"], pitch_wickets["BounceX"], 
-        s=90, 
-        c='red', 
-        edgecolor='white', 
-        linewidths=1.0, 
-        alpha=0.95,
-        label="Wicket"
-    )
-
-    # --- Stump lines (Vertical Lines) ---
-    ax.axvline(x=-0.18, color="#777777", linestyle="--", linewidth=1)
-    ax.axvline(x=0.18, color="#777777", linestyle="--", linewidth=1)
-    ax.axvline(x=0, color="#777777", linestyle="--", linewidth=0.8)
-
-    # --- Layout (Axis and Spines) ---
-    ax.set_xlim([-1.5, 1.5])
-    # Reversed axis: lower values at bottom
-    ax.set_ylim([16.0, -4.0])
-
-    # Hide ticks and labels
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_xlabel("")
-    ax.set_ylabel("")
-    ax.grid(False)
-    
-    # Set spines/borders
-    spine_color = 'black'
-    spine_width = 0.5
-    for spine_name in ['left', 'top', 'bottom', 'right']:
-        ax.spines[spine_name].set_visible(True)
-        ax.spines[spine_name].set_color(spine_color)
-        ax.spines[spine_name].set_linewidth(spine_width)
-        
-    plt.tight_layout()
-    
-    return fig
-    
-## ----------------------------------------------------------
-## CHart 11: Death Overs PitchLength Performance
-## ----------------------------------------------------------
-def create_pitch_metrics_bar(df_in, delivery_type):
-    if df_in.empty:
-        fig, ax = plt.subplots(figsize=(10, 9))
+        fig, ax = plt.subplots(figsize=(5, 3))
         ax.text(0.5, 0.5, "No Data", ha='center', va='center')
         ax.axis('off')
         return fig
 
-    # Data Processing
-    bins_dict = get_pitch_bins(delivery_type)
-    ordered_keys = list(bins_dict.keys())[::-1]
-    
-    def assign_label(x):
-        for label, bounds in bins_dict.items():
-            if bounds[0] <= x < bounds[1]: return label
-        return "Other"
-
-    df_temp = df_in.copy()
-    df_temp["PitchLengthLabel"] = df_temp["BounceX"].apply(assign_label)
-    
-    summary = df_temp.groupby("PitchLengthLabel").agg(
-        Runs=("Runs", "sum"), Balls=("Runs", "count"),
-        Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum())
-    ).reindex(ordered_keys).fillna(0)
-    
-    summary["SR"] = (summary["Runs"] / summary["Balls"] * 100).fillna(0)
-    summary["BPct"] = (summary["Boundaries"] / summary["Balls"] * 100).fillna(0)
-
-    # Plotting: 1 row, 2 columns
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 9), sharey=True)
-    plt.subplots_adjust(wspace=0.3) # Space between the two bar columns
-    
-    y = np.arange(len(ordered_keys))
-
-    # --- Column 1: Strike Rate ---
-    ax1.barh(y, summary["SR"], color='#ff5000', edgecolor='black', height=0.6)
-    ax1.set_title("Strike Rate", fontsize=20, fontweight='bold', color='#000000')
-    ax1.set_yticks(y)
-    ax1.set_yticklabels(ordered_keys, fontsize=16, fontweight='bold')
-    # ax1.set_xlim(0, 250)
-    
-    # Add SR labels at end of bars
-    for i, v in enumerate(summary["SR"]):
-        ax1.text(v + 5, i, f'{v:.0f}', va='center', fontsize=18, fontweight='bold')
-
-    # --- Column 2: Boundary % ---
-    ax2.barh(y, summary["BPct"], color='#ff5000', edgecolor='black', height=0.6)
-    ax2.set_title("Boundary %", fontsize=20, fontweight='bold', color='#000000')
-    ax2.set_xlim(0, 100)
-    
-    # Add B% labels at end of bars
-    for i, v in enumerate(summary["BPct"]):
-        ax2.text(v + 2, i, f'{v:.1f}%', va='center',fontsize=18, fontweight='bold')
-
-    # Clean up both axes
-    for ax in [ax1, ax2]:
-        ax.spines[['top', 'right', 'bottom']].set_visible(False)
-        ax.xaxis.set_visible(False)
-        ax.invert_yaxis() # Top-down order (Full Toss at top)
-
-    return fig
-
-
-# Chart 12 Slower ball Effectiveness
-def create_speed_metrics_bar(df_in):
-    if df_in.empty:
-        fig, ax = plt.subplots(figsize=(5, 2))
-        ax.text(0.5, 0.5, "No Data", ha='center', va='center')
-        ax.axis('off')
-        return fig
-
-    # 1. Define Speed Groups
+    # 1. Define Dynamic Speed Groups based on Delivery Type
     def assign_speed_group(speed):
-        if speed < 125:
-            return "Slower (<125)"
-        return "Pace On (>125)"
+        if delivery_type == "Seam":
+            if speed < 125: return "<125"
+            elif 125 <= speed <= 140: return "125-140"
+            else: return "140+"
+        else: # Spin logic
+            if speed < 85: return "<85"
+            elif 85 <= speed <= 95: return "85-95"
+            else: return "95+"
 
     df_temp = df_in.copy()
-    # Ensure ReleaseSpeed is numeric
     df_temp["ReleaseSpeed"] = pd.to_numeric(df_temp["ReleaseSpeed"], errors='coerce')
     df_temp = df_temp.dropna(subset=["ReleaseSpeed"])
-    
     df_temp["SpeedGroup"] = df_temp["ReleaseSpeed"].apply(assign_speed_group)
     
-    # 2. Aggregate Data
-    ordered_groups = ["Pace On (>125)", "Slower (<125)"]
+    # 2. Set Order based on Delivery Type
+    if delivery_type == "Seam":
+        ordered_groups = ["140+", "125-140", "<125"]
+    else:
+        ordered_groups = ["95+", "85-95", "<85"]
+
+    # 3. Aggregate Data
     summary = df_temp.groupby("SpeedGroup").agg(
         Runs=("Runs", "sum"), 
         Balls=("Runs", "count"),
@@ -1325,30 +944,28 @@ def create_speed_metrics_bar(df_in):
     summary["SR"] = (summary["Runs"] / summary["Balls"] * 100).fillna(0)
     summary["BPct"] = (summary["Boundaries"] / summary["Balls"] * 100).fillna(0)
 
-    # 3. Plotting (1 row, 2 columns)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
-    plt.subplots_adjust(wspace=0.4) 
+    # 4. Plotting
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6, 4), sharey=True)
+    plt.subplots_adjust(wspace=0.6) 
     
     y = np.arange(len(ordered_groups))
-    height = 0.5
+    height = 0.6
 
     # --- Column 1: Strike Rate ---
     ax1.barh(y, summary["SR"], color='#ff5000', edgecolor='black', height=height)
-    ax1.set_title("Strike Rate", fontsize=14, fontweight='bold', color='#000000')
+    ax1.set_title("Strike Rate", fontsize=14, fontweight='bold')
     ax1.set_yticks(y)
-    ax1.set_yticklabels(ordered_groups, fontsize=14, fontweight='bold')
-    #ax1.set_xlim(0, 250)
+    ax1.set_yticklabels(ordered_groups, fontsize=12, fontweight='bold')
     
     for i, v in enumerate(summary["SR"]):
-        ax1.text(v + 5, i, f'{v:.0f}', va='center', fontweight='bold', fontsize = 14)
+        ax1.text(v + 3, i, f'{v:.0f}', va='center', fontweight='bold', fontsize=12)
 
     # --- Column 2: Boundary % ---
     ax2.barh(y, summary["BPct"], color='#ff5000', edgecolor='black', height=height)
-    ax2.set_title("Boundary %", fontsize=14, fontweight='bold', color='#000000')
-    ax2.set_xlim(0, 100)
+    ax2.set_title("Boundary %", fontsize=14, fontweight='bold')
     
     for i, v in enumerate(summary["BPct"]):
-        ax2.text(v + 2, i, f'{v:.1f}%', va='center', fontweight='bold',fontsize = 14)
+        ax2.text(v + 1, i, f'{v:.1f}%', va='center', fontweight='bold', fontsize=12)
 
     # Formatting
     for ax in [ax1, ax2]:
@@ -1538,55 +1155,15 @@ with col1:
     st.pyplot(create_interception_side_on(df_seam, "Seam"), use_container_width=True)
 
     # Row 7: Interception and Scoring Areas (Side-by-Side)
-    bottom_col_left, bottom_col_right = st.columns(2)
-    with bottom_col_left:
-        st.markdown("###### INTERCEPTION TOP-VIEW v SEAM")
-        st.pyplot(create_interception_front_on(df_seam, "Seam"), use_container_width=True)
-        
-    with bottom_col_right:
         st.markdown("###### SCORING AREAS v SEAM ")    
         # Two charts stacked vertically in the right column
         st.pyplot(create_wagon_wheel(df_seam, "Seam"), use_container_width=True)
-        
     
-    # Row 8: Swing/Deviation Direction Analysis (Side-by-Side)
-    final_col_swing, final_col_deviation = st.columns(2)
-
-    with final_col_swing:
-        st.markdown("###### SWING v SEAM")
-        st.pyplot(create_directional_split(df_seam, "Swing", "Swing", "Seam"), use_container_width=True)
-
-    with final_col_deviation:
-        st.markdown("###### DEVIATION v SEAM")
-        st.pyplot(create_directional_split(df_seam, "Deviation", "Deviation", "Seam"), use_container_width=True) 
-
-    st.markdown("""<hr style="height:5px;border:none;color:#333;background-color:#333;margin-bottom:8px;margin-top:5px;" /> """, unsafe_allow_html=True)
-    st.markdown("### DEATH OVERS")
    
-    # --- Row 9 & 10 DEATH OVERS ANALYSIS (Overs 16-20) ---
-    df_death_seam = df_seam[(df_seam['Over'] >= 16) & (df_seam['Over'] <= 20)].copy()
-
-    if df_death_seam.empty:
-        st.warning("No data available for Death Overs (16-20).")
-    else:
-    # 1. Create the two main columns
-        death_map_col, death_bars_col = st.columns([1, 1]) 
-    
-        with death_map_col:
-            st.markdown("###### PITCHMAP IN DEATH OVERS v SEAM ")
-            fig_death_map = create_pitch_map_death(df_death_seam, "Seam")
-            st.pyplot(fig_death_map, use_container_width=True)    
-        
-        # 2. This column will now hold BOTH the Length and Speed charts
-        with death_bars_col:
-            # --- Upper Chart: Pitch Length Metrics ---
-            st.markdown("###### PITCH METRICS IN DEATH OVERS v SEAM")
-            fig_death_metrics = create_pitch_metrics_bar(df_death_seam, "Seam")
-            st.pyplot(fig_death_metrics, use_container_width=True)
-        
-        # --- Lower Chart: Release Speed Metrics ---
-            st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
-            fig_speed_stats = create_speed_metrics_bar(df_death_seam)
+   
+    # --- Row 9 & 10 RELEASE SPEED ANALYSIS---
+    st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
+            fig_speed_stats = create_speed_metrics_bar(df_death_seam, "Seam")
             st.pyplot(fig_speed_stats, use_container_width=True)
         
 # --- RIGHT COLUMN: SPIN ANALYSIS ---
@@ -1611,55 +1188,17 @@ with col2:
     st.markdown("###### INTERCEPTION SIDE-VIEW v SPIN")
     st.pyplot(create_interception_side_on(df_spin, "Spin"), use_container_width=True)
 
-    # Row 7: Interception Front-On and Scoring Areas (Side-by-Side)
-    bottom_col_left, bottom_col_right = st.columns(2)
-
-    with bottom_col_left:
-        st.markdown("###### INTERCEPTION TOP-VIEW v SPIN")
-        st.pyplot(create_interception_front_on(df_spin, "Spin"), use_container_width=True)
-        
-    with bottom_col_right:
-        st.markdown("###### SCORING AREAS v SPIN")
+    # Row 7: Scoring Areas (Side-by-Side)
+    st.markdown("###### SCORING AREAS v SPIN")
         st.pyplot(create_wagon_wheel(df_spin,'SPIN'), use_container_width=True)
-            
-
-    # Row 8: Swing/Deviation Direction Analysis (Side-by-Side)
-    final_col_swing, final_col_deviation = st.columns(2)
-
-    with final_col_swing:
-        st.markdown("###### DRIFT v SPIN")
-        # For spin, we often look at 'Drift' instead of 'Swing'
-        st.pyplot(create_directional_split(df_spin, "Swing", "Drift", "Spin"), use_container_width=True)
-
-    with final_col_deviation:
-        st.markdown("###### TURN v SPIN")
-        # For spin, we often look at 'Turn' instead of 'Deviation'
-        st.pyplot(create_directional_split(df_spin, "Deviation", "Turn", "Spin"), use_container_width=True)
-
-    # --- Row 11 & 12 DEATH OVERS ANALYSIS (SPIN) ---
-    st.markdown("""<hr style="height:5px;border:none;color:#333;background-color:#333;margin-bottom:8px;margin-top:5px;" /> """, unsafe_allow_html=True)
-    st.markdown("### ")
-    # Filter specifically for Spin data during Death Overs
-    df_death_spin = df_spin[(df_spin['Over'] >= 16) & (df_spin['Over'] <= 20)].copy()
-
-    if df_death_spin.empty:
-        st.warning("No spin data available for Death Overs (16-20).")
-    else:
-        # 1. Create the two main columns
-        death_spin_map_col, death_spin_bars_col = st.columns([1, 1]) 
     
-        with death_spin_map_col:
-            st.markdown("###### PITCHMAP IN DEATH OVERS v SPIN")
-            # Pass "Spin" to ensure the correct pitch visual and bins are used
-            fig_death_map_spin = create_pitch_map_death(df_death_spin, "Spin")
-            st.pyplot(fig_death_map_spin, use_container_width=False)    
-        
-        # 2. Stack the Length and Speed charts in the right column
-        with death_spin_bars_col:
-            # --- Upper Chart: Pitch Length Metrics ---
-            st.markdown("###### PITCH METRICS IN DEATH OVERS v SPIN")
-            fig_death_metrics = create_pitch_metrics_bar(df_death_spin, "Spin")
-            st.pyplot(fig_death_metrics, use_container_width=True)
+
+    # --- Row 11 & 12 RELEASE SPEED ANALYSIS---
+# --- Row 9 & 10 RELEASE SPEED ANALYSIS---
+    st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
+            fig_speed_stats = create_speed_metrics_bar(df_death_spin, "Spin")
+            st.pyplot(fig_speed_stats, use_container_width=True)
+    
         
         # # --- Lower Chart: Release Speed Metrics ---
         #     st.markdown("###### METRICS BY RELEASE SPEED v SPIN")
