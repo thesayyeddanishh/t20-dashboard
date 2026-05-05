@@ -812,8 +812,7 @@ def create_wagon_wheel(df_in, delivery_type):
 
         wagon_summary = template_df.merge(summary_with_shots.drop(columns=["FixedAngle"], errors='ignore'), on="ScoringWagon", how="left").fillna(0)
         wagon_summary["RunPercentage"] = (wagon_summary["TotalRuns"] / wagon_summary["TotalRuns"].sum() * 100).fillna(0)
-        wagon_summary["SR"] = (wagon_summary["TotalRuns"] / wagon_summary["Balls"] * 100).fillna(0)
-
+        
         # 3. Plot Part 1: Wagon Wheel (ax_wagon)
         angles = wagon_summary["FixedAngle"].tolist()
         wagon_summary['Rank'] = wagon_summary['RunPercentage'].rank(method='dense', ascending=False)
