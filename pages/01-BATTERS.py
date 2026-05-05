@@ -715,8 +715,7 @@ ax_bar.set_xlim(0, 1)
 ax_bar.set_ylim(0, 1) 
 ax_bar.axis('off')
 
-# -----------------------------------------------------------
-    ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
+# --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
     
     plt.tight_layout(pad=0.2)
     
