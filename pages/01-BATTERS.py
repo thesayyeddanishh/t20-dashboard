@@ -1159,8 +1159,6 @@ with col1:
     # --- Row 9 & 10 RELEASE SPEED ANALYSIS---
     st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
     st.pyplot(create_speed_metrics_bar(df_death_seam, "Seam"), use_container_width=True)
-
-st.pyplot(create_speed_metrics_bar(df_death_seam, "Seam"), use_container_width=True)
         
 # --- RIGHT COLUMN: SPIN ANALYSIS ---
 with col2:
@@ -1170,7 +1168,6 @@ with col2:
     st.markdown("###### CREASE BEEHIVE v SPIN")
     st.pyplot(create_crease_beehive(df_spin, "Spin"), use_container_width=True)
  
-
     # Row 4: Pitch Map and Vertical Run % Bar (Side-by-Side)
     pitch_col, pitch_bars = st.columns(2)
     with pitch_col:
@@ -1188,13 +1185,11 @@ with col2:
     st.markdown("###### SCORING AREAS v SPIN")
     st.pyplot(create_wagon_wheel(df_spin,'SPIN'), use_container_width=True)
     
-
     # --- Row 11 & 12 RELEASE SPEED ANALYSIS---
 # --- Row 9 & 10 RELEASE SPEED ANALYSIS---
     st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
     st.pyplot(create_speed_metrics_bar(df_death_spin, "Spin"), use_container_width=True)
     
-        
         # # --- Lower Chart: Release Speed Metrics ---
         #     st.markdown("###### METRICS BY RELEASE SPEED v SPIN")
         # # Reuses the speed logic (Pace On vs Slower) for the spinners
