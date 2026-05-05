@@ -620,11 +620,11 @@ def create_spinner_hitting_missing(df_in, handedness_label):
 
     # Points
     ax_map.scatter(df_missing_no_wicket["StumpsY"], df_missing_no_wicket["StumpsZ"],
-                   color='#D3D3D3', s=45, edgecolor='white', linewidth=0.4, alpha=0.8)
+                   color='#D3D3D3', s=75, edgecolor='white', linewidth=0.4, alpha=0.8)
     ax_map.scatter(df_hitting_no_wicket["StumpsY"], df_hitting_no_wicket["StumpsZ"],
-                   color='#3b3b3b', s=55, edgecolor='white', linewidth=0.4, alpha=0.9)
+                   color='#3b3b3b', s=85, edgecolor='white', linewidth=0.4, alpha=0.9)
     ax_map.scatter(df_wicket["StumpsY"], df_wicket["StumpsZ"],
-                   color='red', s=65, edgecolor='white', linewidth=0.6, zorder=25)
+                   color='red', s=100, edgecolor='white', linewidth=0.6, zorder=25)
 
     ax_map.set_xlim(-1.1, 1.1)
     ax_map.set_ylim(0, 1.4)
@@ -633,10 +633,10 @@ def create_spinner_hitting_missing(df_in, handedness_label):
     # Labels
     ax_map.text(0.74, 1.4, f"Hitting: {hitting_pct:.0f}%",
                 transform=ax_map.transData, ha='right', va='top',
-                fontsize=10, color='#3b3b3b', weight='bold')
+                fontsize=15, color='#3b3b3b', weight='bold')
     ax_map.text(1.2, 1.4, f"Missing: {missing_pct:.0f}%",
                 transform=ax_map.transData, ha='right', va='top',
-                fontsize=10, color='#D3D3D3', weight='bold')
+                fontsize=15, color='#D3D3D3', weight='bold')
 
     # 5. SUMMARY TABLE
     summary = df_map.groupby("HittingCategory").agg(
@@ -1024,7 +1024,7 @@ with col_rhb:
     st.pyplot(create_spinner_hitting_missing(df_rhb,"RHB"),use_container_width = True)
    
     # Chart 8: SCORING AREAS
-    st.markdown("###### SCORING AREAS BY BATTING STRIKE RATE v RHB")
+    st.markdown("###### SCORING AREAS by RHB")
     st.pyplot(create_spinner_wagon_wheel(df_rhb),use_container_width = True)
 
 
@@ -1055,5 +1055,5 @@ with col_lhb:
     st.pyplot(create_spinner_hitting_missing(df_lhb,"LHB"),use_container_width = True)
 
     # Chart 9: Wagon Wheel SR
-    st.markdown("###### SCORING AREAS BY BATTING STRIKE RATE v LHB")
+    st.markdown("###### SCORING AREAS by LHB")
     st.pyplot(create_spinner_wagon_wheel(df_lhb),use_container_width = True)
