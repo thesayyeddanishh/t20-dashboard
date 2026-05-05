@@ -112,13 +112,12 @@ def create_crease_beehive(df_in, delivery_type):
     for spine in ax_bh.spines.values():
         spine.set_visible(False)
     ax_bh.set_facecolor('white')
+
+## --- CHART 2b: LATERAL PERFORMANCE BOXES (ax_boxes) ---
     
-    # -----------------------------------------------------------
-    ## --- 3. CHART 2b: LATERAL PERFORMANCE BOXES (ax_boxes) ---
-    ## --- CHART 2b: LATERAL PERFORMANCE BOXES (ax_boxes) ---
     num_regions = len(ordered_zones)
     box_width = 1 / num_regions
-    box_height = 0.4 
+    box_height = 0.5  # Increased slightly to fit two lines of text
     left = 0
     
     # 4. COLOR NORMALIZATION BY STRIKE RATE
@@ -127,36 +126,58 @@ def create_crease_beehive(df_in, delivery_type):
     norm = mcolors.Normalize(vmin=0, vmax=sr_max)
     cmap = cm.get_cmap('Wistia')
 
+    # summary["Avg"] = (summary["Runs"] / summary["Wickets"]).replace([np.inf, -np.inf], summary["Runs"]).fillna(0)
+
     for index, row in summary.iterrows():
+        runs = int(row["Runs"])
+        outs = int(row["Wickets"])
+        avg = row.get("Avg", 0)
         sr = row["SR"]
-        wkts = int(row["Wickets"])
     
         if np.isnan(sr) or sr == np.inf:
             color = 'white'
             text_color = 'black'
             sr_display = '0'
+            avg_display = '0.0'
         else:
             color = cmap(norm(sr))
             sr_display = f"{sr:.0f}"
+            avg_display = f"{avg:.1f}"
             
             # Contrast logic for text
             r, g, b, a = color
             luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
             text_color = 'white' if luminosity < 0.5 else 'black'
         
-        ax_boxes.add_patch(patches.Rectangle((left, 0), box_width, box_height, edgecolor="black", facecolor=color, linewidth=1))
+        # Draw the box
+        ax_boxes.add_patch(patches.Rectangle((left, 0), box_width, box_height, 
+                                             edgecolor="black", facecolor=color, linewidth=1))
     
-        # Zone Name
-        ax_boxes.text(left + box_width / 2, box_height + 0.1, index, ha='center', va='bottom', fontsize=7, color='black')
+        # Zone Name (e.g., STUMPS)
+        ax_boxes.text(left + box_width / 2, box_height + 0.05, index, 
+                      ha='center', va='bottom', fontsize=8, fontweight='bold', color='black')
     
-        # 5. UPDATED TEXT: Wickets and Strike Rate
-        label_wkts_sr = f"{wkts}W - SR {sr_display}"
-        ax_boxes.text(left + box_width / 2, box_height * 0.5, label_wkts_sr, ha='center', va='center', fontsize=9, fontweight='bold', color=text_color)
+        # --- UPDATED TEXT: Multi-line Format ---
+        # Line 1: Runs and Outs
+        label_top = f"{runs} Runs, {outs} Outs"
+        # Line 2: Avg and SR
+        label_bottom = f"{avg_display} Avg, {sr_display} SR"
+        
+        # Position Line 1 slightly above center
+        ax_boxes.text(left + box_width / 2, box_height * 0.65, label_top, 
+                      ha='center', va='center', fontsize=8, fontweight='bold', color=text_color)
+        
+        # Position Line 2 slightly below center
+        ax_boxes.text(left + box_width / 2, box_height * 0.35, label_bottom, 
+                      ha='center', va='center', fontsize=8, fontweight='bold', color=text_color)
     
         left += box_width
 
     # Formatting and Border logic...
-    ax_boxes.set_xlim(0, 1); ax_boxes.set_ylim(0, box_height + 0.3); ax_boxes.axis('off')
+    ax_boxes.set_xlim(0, 1)
+    ax_boxes.set_ylim(-0.1, box_height + 0.3) # Adjusted limits for better spacing
+    ax_boxes.axis('off')
+    
     plt.tight_layout(pad=0.2)
     
     # Define Padding Value (in figure coordinates)
