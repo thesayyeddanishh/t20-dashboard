@@ -709,7 +709,7 @@ def create_pacer_release_analysis(df_in, handedness_label):
     return fig
 
 # Chart 11: Speed Effectiveness
-def create_pacer_speed_effectiveness_3col(df_in):
+def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
     if df_in.empty:
         fig, ax = plt.subplots(figsize=(6, 1))
         ax.text(0.5, 0.5, "No Data", ha='center', va='center')
