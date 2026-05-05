@@ -830,8 +830,9 @@ def create_spinner_wagon_wheel(df_in):
     fig.patch.set_facecolor('white')
     
     angles = summary["FixedAngle"].tolist()
-    sr_values = summary["SR"].tolist()
-    colors = ['#ff5000' if r == 1 and v > 0 else 'white' for r, v in zip(summary['RankSR'], sr_values)]
+    pct_values = summary["RunPct"].tolist()
+    # Highlight the area with the highest percentage of runs
+    colors = ['#ff5000' if r == 1 and v > 0 else 'white' for r, v in zip(summary['Rank'], pct_values)]
 
     # Pie Chart
     wedges, _ = ax.pie(angles, colors=colors, wedgeprops={"width": 1, "edgecolor": "black", "linewidth": 0.8}, 
@@ -839,15 +840,17 @@ def create_spinner_wagon_wheel(df_in):
 
     # Labels
     for i, wedge in enumerate(wedges):
-        sr_val = sr_values[i]
-        if sr_val > 0:
+        val = pct_values[i]
+        if val > 0:
             angle = (wedge.theta2 + wedge.theta1) / 2.
             x = 0.65 * np.cos(np.deg2rad(angle))
             y = 0.65 * np.sin(np.deg2rad(angle))
             
             # Contrast for #1 Rank
-            t_color = 'white' if colors[i] == '#d52221' else 'black'
-            ax.text(x, y, f"{sr_val:.0f}", ha='center', va='center', fontsize=8, color=t_color)
+            t_color = 'white' if colors[i] == '#ff5000' else 'black'
+            # Display as percentage (e.g., 25%)
+            ax.text(x, y, f"{val:.0f}%", ha='center', va='center', fontsize=12, fontweight='bold', color=t_color)
+            
     ax.axis('equal')
     return fig
 
