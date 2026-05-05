@@ -915,13 +915,14 @@ def create_speed_metrics_bar(df_in, delivery_type):
     summary = df_temp.groupby("SpeedGroup").agg(
         Runs=("Runs", "sum"), 
         Balls=("Runs", "count"),
-        # Count dismissals where the wicket column is not null or based on your specific 'isOut' column
-        Dismissals=("isWicket", "sum") 
+        Dismissals=("Wicket", "sum") 
     ).reindex(ordered_groups).fillna(0)
     
     # Calculations
     summary["SR"] = (summary["Runs"] / summary["Balls"] * 100).fillna(0)
-    # Average = Runs / Dismissals (handle division by zero if not out)
+    
+    # Calculate Average: Runs / Dismissals
+    # We use .replace to handle the 'Infinity' case (when Dismissals is 0)
     summary["Avg"] = (summary["Runs"] / summary["Dismissals"]).replace([np.inf, -np.inf], summary["Runs"]).fillna(0)
 
     # 4. Plotting - Changed to 1 row, 4 columns
