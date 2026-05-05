@@ -784,7 +784,7 @@ def create_wagon_wheel(df_in, delivery_type):
         return fig
 
     # CRITICAL FIX: Initialize the figure and axes to avoid NameError
-    fig, (ax_wagon, ax_sr) = plt.subplots(2, 1, figsize=FIG_SIZE)
+    fig, (ax_wagon) = plt.subplots(1, 1, figsize=FIG_SIZE)
     plt.subplots_adjust(hspace=0.3)
 
     try:
