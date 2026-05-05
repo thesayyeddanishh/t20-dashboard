@@ -864,7 +864,7 @@ def create_wagon_wheel(df_in, delivery_type):
                 autotext.set_verticalalignment('center')
                 
                 # 2. Set styling (Font size and weight)
-                autotext.set_fontsize(26)
+                autotext.set_fontsize(15)
                 autotext.set_fontweight('bold')
                 
                 # 3. Dynamic contrast: Determine if text should be white or black
@@ -881,7 +881,7 @@ def create_wagon_wheel(df_in, delivery_type):
                 autotext.set_text('')
     ax_wagon.axis('equal');
 
-# Chart 12: Speed Effectiveness
+----===== # Chart 12: Speed Effectiveness====-------------
 def create_speed_metrics_bar(df_in, delivery_type):
     if df_in.empty:
         fig, ax = plt.subplots(figsize=(5, 3))
