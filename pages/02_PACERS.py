@@ -153,39 +153,47 @@ def create_pacer_pitch_length_bars(df_in):
 
     df_pitch = df_in.copy()
     df_pitch["PitchLength"] = df_pitch["BounceX"].apply(assign_pitch_length)
-    
-    # Aggregate data for White Ball metrics
+
+    # 1. Aggregate data (Keep Dots if you need them elsewhere, otherwise you can remove that line)
     df_summary = df_pitch.groupby("PitchLength").agg(
         Runs=("Runs", "sum"), 
         Wickets=("Wicket", lambda x: (x == True).sum()), 
-        Balls=("Wicket", "count"),
-        Dots=("Runs", lambda x: (x == 0).sum())
+        Balls=("Wicket", "count")
     ).reset_index().set_index("PitchLength").reindex(ordered_keys).fillna(0)
     
-    # White Ball Calculations
+    # 2. White Ball Calculations
     df_summary["Economy"] = df_summary.apply(lambda row: (row["Runs"] / row["Balls"] * 6) if row["Balls"] > 0 else 0.0, axis=1)
-    df_summary["Dismissals"] = df_summary["Wickets"]
-    df_summary["Dot%"] = df_summary.apply(lambda row: (row["Dots"] / row["Balls"] * 100) if row["Balls"] > 0 else 0.0, axis=1)
+
+    # Bowling Average (Runs per Wicket)
+    df_summary["Avg"] = df_summary.apply(
+        lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else row["Runs"], axis=1
+    )
+
+    # Bowling Strike Rate (Balls per Wicket)
+    df_summary["SR"] = df_summary.apply(
+        lambda row: row["Balls"] / row["Wickets"] if row["Wickets"] > 0 else row["Balls"], axis=1
+    )
     
     # Categories for plotting (reversed for barh)
     categories = df_summary.index.tolist()[::-1]
     
     # 2. Chart Setup (3 Rows, 1 Column)
     fig, axes = plt.subplots(3, 1, figsize=FIG_SIZE, sharey=True) 
-    plt.subplots_adjust(hspace=5) 
+    plt.subplots_adjust(hspace=0.5) # Reduced hspace from 5 to 0.5 for better spacing
 
-    # --- Metrics and Titles (Order: Economy, Dismissals, Dot%) ---
-    metrics = ["Economy", "Dismissals", "Dot%"]
-    titles = ["Economy", "Dismissals", "Dot %"]
+    # --- UPDATED: Metrics and Titles (Economy, Average, Strike Rate) ---
+    metrics = ["Economy", "Avg", "SR"]
+    titles = ["Economy", "Bowling Average", "Bowling Strike Rate"]
 
     # Dynamic limits for scaling
     max_eco = df_summary["Economy"].max() * 1.2 if df_summary["Economy"].max() > 0 else 12
-    max_wkts = df_summary["Dismissals"].max() * 1.5 if df_summary["Dismissals"].max() > 0 else 5
+    max_avg = df_summary["Avg"].max() * 1.2 if df_summary["Avg"].max() > 0 else 50
+    max_sr = df_summary["SR"].max() * 1.2 if df_summary["SR"].max() > 0 else 40
     
     xlim_limits = {
         "Economy": (0, max_eco),
-        "Dismissals": (0, max_wkts),
-        "Dot%": (0, 100)
+        "Avg": (0, max_avg),
+        "SR": (0, max_sr)
     }
 
     # --- Plotting Loop ---
@@ -199,14 +207,14 @@ def create_pacer_pitch_length_bars(df_in):
         # Horizontal Bar Chart
         ax.barh(categories, values, height=0.8, color='#ff5000', zorder=5, alpha=1.0)
         
-        # --- Annotations ---
+        # --- UPDATED: Annotations for Avg and SR ---
         for j, (cat, val) in enumerate(zip(categories, values)):
-            if metric == "Dismissals":
-                label = f"{int(val)}"
-            elif metric == "Dot%":
-                label = f"{val:.0f}%"
-            else: # Economy
+            if metric == "Economy":
                 label = f"{val:.1f}"
+            elif metric == "Avg":
+                label = f"{val:.1f}" # One decimal for Bowling Average
+            else: # SR
+                label = f"{val:.1f}" # One decimal for Bowling Strike Rate
             
             ax.text(val, j, label, 
                     ha='left', va='center', 
@@ -237,7 +245,7 @@ def create_pacer_pitch_length_bars(df_in):
             
     plt.tight_layout(pad=0.5)
     return fig
-
+    
 # =========================================================
 # Chart 1: CREASE BEEHIVE 
 # ========================================================
