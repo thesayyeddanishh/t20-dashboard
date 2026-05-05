@@ -425,7 +425,7 @@ def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and
 
 # --- CHART 4: RELEASE SPEED DISTRIBUTION ---
 def create_pacer_release_speed_distribution(df_in, handedness_label):
-    FIG_SIZE = (4, 4.4)
+    FIG_SIZE = (3, 4.4)
 
     if df_in.empty or "ReleaseSpeed" not in df_in.columns or df_in["ReleaseSpeed"].empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -568,7 +568,7 @@ def create_pacer_release_speed_distribution(df_in, handedness_label):
 
 # Chart 5 Bowler Release Map
 def create_pacer_release_analysis(df_in, handedness_label): 
-    FIG_SIZE = (4, 3.4) # Increased height for both charts
+    FIG_SIZE = (3, 3.4) # Increased height for both charts
 
     if df_in.empty or "ReleaseY" not in df_in.columns or "ReleaseZ" not in df_in.columns:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
@@ -778,43 +778,7 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
 
     return fig
 
-# Chart 12: Wagon Wheel : Strike Rate
-def calculate_scoring_wagon(row):
-    """Calculates the scoring area based on LandingX/Y coordinates and handedness."""
-    LX = row.get("LandingX"); LY = row.get("LandingY"); RH = row.get("IsBatsmanRightHanded")
-    if RH is None or LX is None or LY is None or row.get("Runs", 0) == 0: return None
-    
-    def atan_safe(numerator, denominator): return np.arctan(numerator / denominator) if denominator != 0 else np.nan 
-    
-    # Right Handed Batsman Logic
-    if RH == True: 
-        if LX <= 0 and LY > 0: return "FINE LEG"
-        elif LX <= 0 and LY <= 0: return "THIRD MAN"
-        elif LX > 0 and LY < 0:
-            if atan_safe(LY, LX) < np.pi / -4: return "COVER"
-            elif atan_safe(LX, LY) <= np.pi / -4: return "LONG OFF" 
-        elif LX > 0 and LY >= 0:
-            if atan_safe(LY, LX) >= np.pi / 4: return "SQUARE LEG"
-            elif atan_safe(LY, LX) <= np.pi / 4: return "LONG ON"
-    # Left Handed Batsman Logic
-    elif RH == False: 
-        if LX <= 0 and LY > 0: return "THIRD MAN"
-        elif LX <= 0 and LY <= 0: return "FINE LEG"
-        elif LX > 0 and LY < 0:
-            if atan_safe(LY, LX) < np.pi / -4: return "SQUARE LEG"
-            elif atan_safe(LX, LY) <= np.pi / -4: return "LONG ON"
-        elif LX > 0 and LY >= 0:
-            if atan_safe(LY, LX) >= np.pi / 4: return "COVER"
-            elif atan_safe(LY, LX) <= np.pi / 4: return "LONG OFF"
-    return None
-
-def calculate_scoring_angle(area):
-    """Defines the fixed angle size for each wedge."""
-    if area in ["FINE LEG", "THIRD MAN"]: return 90
-    elif area in ["COVER", "SQUARE LEG", "LONG OFF", "LONG ON"]: return 45
-    return 0
-
-def create_pacer_death_wagon_wheel(df_in):
+def create_pacer_wagon_wheel(df_in):
     # Standard size for single wagon wheel
     FIG_SIZE = (5, 3)
 
@@ -828,10 +792,9 @@ def create_pacer_death_wagon_wheel(df_in):
     df_in["ScoringWagon"] = df_in.apply(calculate_scoring_wagon, axis=1)
     df_in["FixedAngle"] = df_in["ScoringWagon"].apply(calculate_scoring_angle)
     
-    # 2. Aggregate Data (Runs and Balls for SR)
+    # 2. Aggregate Data (Total Runs)
     summary = df_in.groupby("ScoringWagon").agg(
         TotalRuns=("Runs", "sum"), 
-        TotalBalls=("Runs", "count"),
         FixedAngle=("FixedAngle", 'first')
     ).reset_index().dropna(subset=["ScoringWagon"])
 
@@ -842,16 +805,24 @@ def create_pacer_death_wagon_wheel(df_in):
     
     template = pd.DataFrame({"ScoringWagon": all_areas, "FixedAngle": [calculate_scoring_angle(a) for a in all_areas]})
     summary = template.merge(summary.drop(columns=["FixedAngle"]), on="ScoringWagon", how="left").fillna(0)
-    summary["SR"] = summary.apply(lambda row: (row["TotalRuns"] / row["TotalBalls"] * 100) if row["TotalBalls"] > 0 else 0, axis=1)
-    summary['RankSR'] = summary['SR'].rank(method='dense', ascending=False)
+    
+    # --- CHANGE: Calculate Run Percentage instead of SR ---
+    total_runs_overall = summary["TotalRuns"].sum()
+    if total_runs_overall > 0:
+        summary["RunPct"] = (summary["TotalRuns"] / total_runs_overall * 100)
+    else:
+        summary["RunPct"] = 0
+        
+    summary['Rank'] = summary['RunPct'].rank(method='dense', ascending=False)
 
     # 3. Plotting
     fig, ax = plt.subplots(figsize=FIG_SIZE)
     fig.patch.set_facecolor('white')
     
     angles = summary["FixedAngle"].tolist()
-    sr_values = summary["SR"].tolist()
-    colors = ['#ff5000' if r == 1 and v > 0 else 'white' for r, v in zip(summary['RankSR'], sr_values)]
+    pct_values = summary["RunPct"].tolist()
+    # Highlight the area with the highest percentage of runs
+    colors = ['#ff5000' if r == 1 and v > 0 else 'white' for r, v in zip(summary['Rank'], pct_values)]
 
     # Pie Chart
     wedges, _ = ax.pie(angles, colors=colors, wedgeprops={"width": 1, "edgecolor": "black", "linewidth": 0.8}, 
@@ -859,18 +830,19 @@ def create_pacer_death_wagon_wheel(df_in):
 
     # Labels
     for i, wedge in enumerate(wedges):
-        sr_val = sr_values[i]
-        if sr_val > 0:
+        val = pct_values[i]
+        if val > 0:
             angle = (wedge.theta2 + wedge.theta1) / 2.
             x = 0.65 * np.cos(np.deg2rad(angle))
             y = 0.65 * np.sin(np.deg2rad(angle))
             
             # Contrast for #1 Rank
             t_color = 'white' if colors[i] == '#ff5000' else 'black'
-            ax.text(x, y, f"{sr_val:.0f}", ha='center', va='center', fontsize=12,fontweight = 'bold', color=t_color)
+            # Display as percentage (e.g., 25%)
+            ax.text(x, y, f"{val:.0f}%", ha='center', va='center', fontsize=12, fontweight='bold', color=t_color)
+            
     ax.axis('equal')
     return fig
-
 
 
 # PAGE SETUP LAYOUT
@@ -1048,7 +1020,7 @@ with col_rhb:
     
     # Chart 17: Scoring Areas
     st.markdown("###### SCORING AREAS of RHB ")
-    st.pyplot(create_pacer_death_wagon_wheel(df_rhb), use_container_width=True)
+    st.pyplot(create_pacer_wagon_wheel(df_rhb), use_container_width=True)
 
 # === RIGHT COLUMN: AGAINST LEFT-HANDED BATSMEN (LHB) ===
 with col_lhb:
@@ -1071,13 +1043,11 @@ with col_lhb:
     # st.pyplot(create_pacer_lateral_performance_boxes(df_lhb, "LHB"), use_container_width=True)
 
     # Chart 4/5: RELEASE
-    pace_col, release_col = st.columns([2, 2]) 
-    with pace_col:
-        st.markdown("###### RELEASE SPEED v LHB")
-        st.pyplot(create_pacer_release_speed_distribution(df_lhb, "LHB"), use_container_width=True)
-    with release_col:
-        st.markdown("###### RELEASE v LHB")
-        st.pyplot(create_pacer_release_analysis(df_lhb, "LHB"), use_container_width=True)
+    st.markdown("###### RELEASE SPEED v LHB")
+    st.pyplot(create_pacer_release_speed_distribution(df_lhb, "LHB"), use_container_width=True)
+    
+    st.markdown("###### RELEASE v LHB")
+    st.pyplot(create_pacer_release_analysis(df_lhb, "LHB"), use_container_width=True)
         
     # Chart 16: Speed Distribution - Death Overs
     st.markdown("###### SPEED DISTRIBUTION METRICS")
@@ -1085,4 +1055,4 @@ with col_lhb:
     
     # Chart 17: Scoring Areas
     st.markdown("###### SCORING AREAS of LHB ")
-    st.pyplot(create_pacer_death_wagon_wheel(df_lhb), use_container_width=True)
+    st.pyplot(create_pacer_wagon_wheel(df_lhb), use_container_width=True)
