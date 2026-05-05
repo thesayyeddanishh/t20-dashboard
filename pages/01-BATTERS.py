@@ -759,9 +759,8 @@ border_rect = patches.Rectangle(
         zorder=0 # Ensure it stays behind any data points if they overlap
     )
 
-fig.patches.append(border_rect)
-
-return fig
+    fig.patches.append(border_rect)
+    return fig
     
 
 # --- Helper Functions for Chart 6 ---
