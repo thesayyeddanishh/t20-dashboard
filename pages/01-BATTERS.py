@@ -142,7 +142,7 @@ def create_crease_beehive(df_in, delivery_type):
         else:
             color = cmap(norm(sr))
             sr_display = f"{sr:.0f}"
-            avg_display = f"{avg:0f}"
+            avg_display = f"{avg:.0f}"
             
             # Contrast logic for text
             r, g, b, a = color
