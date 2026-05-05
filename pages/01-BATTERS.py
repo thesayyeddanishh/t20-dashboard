@@ -1162,8 +1162,9 @@ with col1:
    
     # --- Row 9 & 10 RELEASE SPEED ANALYSIS---
     st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
-            fig_speed_stats = create_speed_metrics_bar(df_death_seam, "Seam")
-            st.pyplot(fig_speed_stats, use_container_width=True)
+    st.pyplot(create_speed_metrics_bar(df_death_seam, "Seam"), use_container_width=True)
+
+st.pyplot(create_speed_metrics_bar(df_death_seam, "Seam"), use_container_width=True)
         
 # --- RIGHT COLUMN: SPIN ANALYSIS ---
 with col2:
@@ -1195,8 +1196,7 @@ with col2:
     # --- Row 11 & 12 RELEASE SPEED ANALYSIS---
 # --- Row 9 & 10 RELEASE SPEED ANALYSIS---
     st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
-            fig_speed_stats = create_speed_metrics_bar(df_death_spin, "Spin")
-            st.pyplot(fig_speed_stats, use_container_width=True)
+    st.pyplot(create_speed_metrics_bar(df_death_spin, "Spin"), use_container_width=True)
     
         
         # # --- Lower Chart: Release Speed Metrics ---
