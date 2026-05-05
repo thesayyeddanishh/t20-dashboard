@@ -773,8 +773,8 @@ def calculate_scoring_angle(area):
 
 # --- Main Combined Function (Chart 6) ---
 def create_wagon_wheel(df_in, delivery_type):
-    FIG_WIDTH = 11
-    FIG_HEIGHT = 12
+    FIG_WIDTH = 7
+    FIG_HEIGHT = 5
     FIG_SIZE = (FIG_WIDTH, FIG_HEIGHT)
 
     if df_in.empty:
@@ -931,45 +931,43 @@ def create_speed_metrics_bar(df_in, delivery_type):
     # Finally, fill any remaining NaNs (0/0 cases) with 0
     summary["Avg"] = summary["Avg"].fillna(0)
 
-    # 4. Plotting - Wide figure (16) and taller (5) to give text room
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(16, 5), sharey=True)
-    
-    # Increase horizontal space between the four charts
-    plt.subplots_adjust(wspace=0.4) 
+    # 4. Plotting - Wider figure to prevent squashing
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(16, 4), sharey=True)
+    plt.subplots_adjust(wspace=0.3) 
     
     y = np.arange(len(ordered_groups))
-    height = 0.7  # Thicker bars look better for labels
+    height = 0.7 
 
-    # List of metrics and titles to loop through for consistency
     metrics = ["Runs", "Dismissals", "Avg", "SR"]
     titles = ["Runs", "Outs", "Avg", "SR"]
     axes = [ax1, ax2, ax3, ax4]
 
     for ax, metric, title in zip(axes, metrics, titles):
         vals = summary[metric]
-        bars = ax.barh(y, vals, color='#ff5000', edgecolor='black', height=height)
-        ax.set_title(title, fontsize=16, fontweight='bold', pad=15)
+        ax.barh(y, vals, color='#ff5000', edgecolor='black', height=height)
+        ax.set_title(title, fontsize=14, fontweight='bold')
         
-        # Add labels INSIDE or at the END of bars based on size
-        for bar in bars:
-            width = bar.get_width()
-            label_x_pos = width / 2 if width > 20 else width + 2  # Center if bar is wide enough
-            label_color = 'white' if width > 20 else 'black'
+        # FIX: Place text at a fixed X-position (5% of the max value) 
+        # to ensure it's always readable and aligned
+        max_val = vals.max() if vals.max() > 0 else 1
+        for i, v in enumerate(vals):
+            # If the bar is very short, put black text after it. 
+            # If bar is long, put white text at the start of the bar.
+            label_x = max_val * 0.05 
             
             ax.text(
-                label_x_pos, 
-                bar.get_y() + bar.get_height()/2,
-                f'{width:.0f}' if metric != "Avg" else f'{width:.1f}',
+                label_x, i, 
+                f'{v:.0f}' if metric != "Avg" else f'{v:.1f}',
                 va='center', 
-                ha='center' if width > 20 else 'left',
+                ha='left',
                 fontweight='bold', 
-                fontsize=14,
-                color=label_color
+                fontsize=13,
+                color='white' if v > (max_val * 0.2) else 'black'
             )
 
-    # Clean up formatting for all axes
+    # Formatting
     ax1.set_yticks(y)
-    ax1.set_yticklabels(ordered_groups, fontsize=14, fontweight='bold')
+    ax1.set_yticklabels(ordered_groups, fontsize=12, fontweight='bold')
     
     for ax in axes:
         ax.spines[['top', 'right', 'bottom']].set_visible(False)
