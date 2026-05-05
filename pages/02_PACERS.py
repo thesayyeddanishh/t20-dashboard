@@ -708,7 +708,7 @@ def create_pacer_release_analysis(df_in, handedness_label):
 
     return fig
 
-# Chart 11: Speed Effectiveness - Death Overs
+# Chart 11: Speed Effectiveness
 def create_pacer_speed_effectiveness_3col(df_in):
     if df_in.empty:
         fig, ax = plt.subplots(figsize=(6, 1))
@@ -818,28 +818,25 @@ def create_pacer_death_wagon_wheel(df_in):
     # Standard size for single wagon wheel
     FIG_SIZE = (5, 3)
 
-    # Filter for Death Overs (16-20)
-    df_death = df_in[df_in["Over"] >= 16].copy()
-
-    if df_death.empty:
+    if df_in.empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
-        ax.text(0.5, 0.5, "No Data for Death Overs (16-20)", ha='center', va='center', fontsize=12)
+        ax.text(0.5, 0.5, "No Data", ha='center', va='center', fontsize=12)
         ax.axis('off')
         return fig
 
     # 1. Calculate Scoring Areas
-    df_death["ScoringWagon"] = df_death.apply(calculate_scoring_wagon, axis=1)
-    df_death["FixedAngle"] = df_death["ScoringWagon"].apply(calculate_scoring_angle)
+    df_in["ScoringWagon"] = df_in.apply(calculate_scoring_wagon, axis=1)
+    df_in["FixedAngle"] = df_in["ScoringWagon"].apply(calculate_scoring_angle)
     
     # 2. Aggregate Data (Runs and Balls for SR)
-    summary = df_death.groupby("ScoringWagon").agg(
+    summary = df_in.groupby("ScoringWagon").agg(
         TotalRuns=("Runs", "sum"), 
         TotalBalls=("Runs", "count"),
         FixedAngle=("FixedAngle", 'first')
     ).reset_index().dropna(subset=["ScoringWagon"])
 
     # Handedness Check
-    is_rhb = df_death["IsBatsmanRightHanded"].mode().iloc[0] if not df_death["IsBatsmanRightHanded"].empty else True
+    is_rhb = df_in["IsBatsmanRightHanded"].mode().iloc[0] if not df_in["IsBatsmanRightHanded"].empty else True
     all_areas = ["FINE LEG", "SQUARE LEG", "LONG ON", "LONG OFF", "COVER", "THIRD MAN"] if is_rhb else \
                 ["THIRD MAN", "COVER", "LONG OFF", "LONG ON", "SQUARE LEG", "FINE LEG"]
     
@@ -1047,11 +1044,14 @@ with col_rhb:
         st.markdown("###### RELEASE v RHB")
         st.pyplot(create_pacer_release_analysis(df_rhb, "RHB"), use_container_width=True)
     
-
     # Chart 16: Speed Distribution - Death Overs
-    st.markdown("###### SPEED DISTRIBUTION IN DEATH OVERS - OVERALL")
-    st.pyplot(create_pacer_speed_effectiveness_3col(df_do), use_container_width=True)
-
+    st.markdown("###### SPEED DISTRIBUTION METRICS")
+    st.pyplot(create_pacer_speed_effectiveness_3col(df_rhb, "RHB"), use_container_width=True)
+    
+    # Chart 17: Scoring Areas
+    with wagon_rhb:
+        st.markdown("###### SCORING AREAS of RHB ")
+        st.pyplot(create_pacer_death_wagon_wheel(df_rhb), use_container_width=True)
 
 # === RIGHT COLUMN: AGAINST LEFT-HANDED BATSMEN (LHB) ===
 with col_lhb:
@@ -1082,12 +1082,11 @@ with col_lhb:
         st.markdown("###### RELEASE v LHB")
         st.pyplot(create_pacer_release_analysis(df_lhb, "LHB"), use_container_width=True)
         
+    # Chart 16: Speed Distribution - Death Overs
+    st.markdown("###### SPEED DISTRIBUTION METRICS")
+    st.pyplot(create_pacer_speed_effectiveness_3col(df_lhb, "LHB"), use_container_width=True)
     
-    # Chart 16: Wagon wheel sr - Death Overs
-    wagon_rhb,wagon_lhb = st.columns([1,1])
-    with wagon_rhb:
-        st.markdown("###### STRIKE RATE IN DEATH  OVERS v RHB ")
-        st.pyplot(create_pacer_death_wagon_wheel(df_rhb), use_container_width=True)
+    # Chart 17: Scoring Areas
     with wagon_lhb:
-        st.markdown("###### STRIKE RATE UIN DEATH OVERS v LHB")
-        st.pyplot(create_pacer_death_wagon_wheel(df_rhb), use_container_width=True)   
+        st.markdown("###### SCORING AREAS of LHB ")
+        st.pyplot(create_pacer_death_wagon_wheel(df_lhb), use_container_width=True)
