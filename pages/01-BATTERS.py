@@ -820,8 +820,13 @@ def create_wagon_wheel(df_in, delivery_type):
         colors = ['#ff5000' if (r == 1 and p > 0) else 'white' for r, p in zip(wagon_summary['Rank'], wagon_summary['RunPercentage'])]
 
         wedges, texts, autotexts = ax_wagon.pie(
-            angles, colors=colors, wedgeprops={"width": 1, "edgecolor": "black"}, 
-            startangle=90, counterclock=False, pctdistance=0.6
+            angles, 
+            colors=colors, 
+            wedgeprops={"width": 1, "edgecolor": "black"}, 
+            startangle=90, 
+            counterclock=False, 
+            autopct='%1.0f%%', # Changed from '' to '%1.0f%%'
+            pctdistance=0.6
         )
 
         # 4. Styling Text with Contrast Logic
