@@ -921,9 +921,15 @@ def create_speed_metrics_bar(df_in, delivery_type):
     # Calculations
     summary["SR"] = (summary["Runs"] / summary["Balls"] * 100).fillna(0)
     
-    # Calculate Average: Runs / Dismissals
-    # We use .replace to handle the 'Infinity' case (when Dismissals is 0)
-    summary["Avg"] = (summary["Runs"] / summary["Dismissals"]).replace([np.inf, -np.inf], summary["Runs"]).fillna(0)
+    # Calculate Average
+    # If Dismissals > 0, do the math; otherwise, the average is just the Total Runs
+    summary["Avg"] = (summary["Runs"] / summary["Dismissals"])
+    
+    # This checks for both positive and negative infinity and replaces with Runs
+    summary.loc[np.isinf(summary["Avg"]), "Avg"] = summary["Runs"]
+    
+    # Finally, fill any remaining NaNs (0/0 cases) with 0
+    summary["Avg"] = summary["Avg"].fillna(0)
 
     # 4. Plotting - Changed to 1 row, 4 columns
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(12, 4), sharey=True)
