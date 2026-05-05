@@ -1,0 +1,1758 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go 
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+from io import StringIO
+import base64
+import matplotlib.patheffects as pe
+from matplotlib import cm, colors, patches
+import matplotlib.colors as mcolors
+from matplotlib.gridspec import GridSpec
+from math import floor, ceil
+
+
+
+# =========================================================
+# Chart 1: CREASE BEEHIVE 
+# ========================================================
+def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function and parameter
+    if df_in.empty:
+        fig, ax = plt.subplots(figsize=(7, 5)); 
+        ax.text(0.5, 0.5, f"No data for Analysis ({handedness_label})", ha='center', va='center', fontsize=12); 
+        ax.axis('off'); 
+        return fig
+
+    # --- Data Filtering ---
+    wickets = df_in[df_in["Wicket"] == True]
+    non_wickets_all = df_in[df_in["Wicket"] == False]
+    boundaries = non_wickets_all[(non_wickets_all["Runs"] == 4) | (non_wickets_all["Runs"] == 6)]
+    regular_balls = non_wickets_all[(non_wickets_all["Runs"] != 4) & (non_wickets_all["Runs"] != 6)]
+    
+    # --- Lateral Zone Data Prep (Chart 2b) ---
+    df_lateral = df_in.copy()
+    
+    # DETERMINE HANDEDNESS FOR ZONE REVERSAL
+    # If the function is called with a single handedness filter (RHB or LHB), this will be consistent.
+    is_rhb = handedness_label == "RHB" 
+
+    def assign_lateral_zone(row):
+        y = row["CreaseY"]
+        if row["IsBatsmanRightHanded"] == True:
+            # RHB: Off side is negative Y, Leg side is positive Y
+            if y > 0.18: return "LEG"
+            elif y >= -0.18: return "STUMPS"
+            elif y > -0.65: return "OUTSIDE OFF"
+            else: return "WAY OUTSIDE OFF"
+        else: # Left-Handed
+            # LHB: Leg side is negative Y, Off side is positive Y
+            if y > 0.65: return "WAY OUTSIDE OFF"
+            elif y > 0.18: return "OUTSIDE OFF"
+            elif y >= -0.18: return "STUMPS"
+            else: return "LEG"
+            
+    df_lateral["LateralZone"] = df_lateral.apply(assign_lateral_zone, axis=1)
+    
+    summary = (
+        df_lateral.groupby("LateralZone").agg(
+            Runs=("Runs", "sum"), Wickets=("Wicket", lambda x: (x == True).sum()), Balls=("Wicket", "count")
+        )
+    )
+    
+    # 1. Define standard zone order (WOO to LEG)
+    ordered_zones_base = ["WAY OUTSIDE OFF", "OUTSIDE OFF", "STUMPS", "LEG"]
+    
+    # 2. HANDEDNESS AWARE REVERSAL: Reverse order for LHB for visual consistency
+    ordered_zones = ordered_zones_base if is_rhb else ordered_zones_base[::-1]
+    
+    summary = summary.reindex(ordered_zones).fillna(0)
+    
+    # BOWLING Metrics
+    # summary["Avg Runs/Wicket"] = summary.apply(lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else np.nan, axis=1)
+    summary["Economy"] = summary.apply(lambda row: (row["Runs"] / row["Balls"]) * 6 if row["Balls"] > 0 else np.nan, axis=1)
+
+    # -----------------------------------------------------------
+    # --- 1. SETUP SUBPLOTS ---
+    fig = plt.figure(figsize=(7, 5)) 
+    gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.005) 
+    ax_bh = fig.add_subplot(gs[0, 0])      
+    ax_boxes = fig.add_subplot(gs[1, 0])   
+    fig.patch.set_facecolor('white')
+
+    
+    # --- Traces ---
+    ax_bh.scatter(regular_balls["CreaseY"], regular_balls["CreaseZ"], s=40, c='lightgrey', edgecolor='white', linewidths=1.0, alpha=0.95, label="Regular Ball")
+    ax_bh.scatter(boundaries["CreaseY"], boundaries["CreaseZ"], s=80, c='royalblue', edgecolor='white', linewidths=1.0, alpha=0.95, label="Boundary")
+    ax_bh.scatter(wickets["CreaseY"], wickets["CreaseZ"], s=80, c='red', edgecolor='white', linewidths=1.0, alpha=0.95, label="Wicket")
+
+    # --- Reference Lines ---
+    ax_bh.axvline(x=-0.18, color="grey", linestyle="--", linewidth=0.5) 
+    ax_bh.axvline(x=0.18, color="grey", linestyle="--", linewidth=0.5)
+    ax_bh.axvline(x=0, color="grey", linestyle="--", linewidth=0.5) 
+    ax_bh.axvline(x=-0.92, color="grey", linestyle="-", linewidth=0.5) 
+    ax_bh.axvline(x=0.92, color="grey", linestyle="-", linewidth=0.5)
+    ax_bh.axhline(y=0.78, color="grey", linestyle="-", linewidth=0.5)
+
+    # --- Annotation ---
+    ax_bh.text(-1.5, 0.78, "Stump line", ha='left', va='bottom', fontsize=8, color="grey", transform=ax_bh.transData)
+    
+    # --- Formatting ---
+    ax_bh.set_xlim([-1.8, 1.8])
+    ax_bh.set_ylim([0, 1.5])
+    ax_bh.set_aspect('equal', adjustable='box')
+    ax_bh.set_xticks([]); ax_bh.set_yticks([]); ax_bh.grid(False)
+    for spine in ax_bh.spines.values():
+        spine.set_visible(False)
+    ax_bh.set_facecolor('white')
+    
+    # -----------------------------------------------------------
+    ## --- 3. CHART 1b: LATERAL PERFORMANCE BOXES (ax_boxes) ----
+    num_regions = len(ordered_zones)
+    box_width = 1 / num_regions
+    box_height = 0.4 
+    left = 0
+    
+    # Color Normalization
+    eco_values = summary["Economy"].dropna()
+    eco_max = eco_values.max() if eco_values.max() > 0 else 18 # Use a suitable default max
+    norm = mcolors.Normalize(vmin=0, vmax=eco_max) 
+    cmap = cm.get_cmap('Wistia')
+
+    for index, row in summary.iterrows():
+        eco = row["Economy"]
+        wkts = int(row["Wickets"]) # Ensure wkts is defined here from the row
+        balls = int(row["Balls"])
+        
+        # Color based on Economy (handling NaN)
+        color = cmap(norm(eco)) if not np.isnan(eco) else (1, 1, 1, 1) # White if no balls bowled
+        
+        # Draw the Rectangle
+        ax_boxes.add_patch(
+            patches.Rectangle((left, 0), box_width, box_height, 
+                              edgecolor="black", facecolor=color, linewidth=0.4)
+        )
+        
+        # Label 1: Zone Name
+        ax_boxes.text(left + box_width / 2, box_height + 0.1, 
+                      index, ha='center', va='bottom', fontsize=7, color='black')
+        
+        # Contrast logic for text
+        text_color = 'black'
+        if balls > 0:
+            r, g, b, a = color
+            luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            text_color = 'white' if luminosity < 0.5 else 'black'
+        
+        # Label 2: Wickets and Economy (Replaces Average)
+        label_wkts_eco = f"{wkts}W - Eco {eco:.1f}" if not np.isnan(eco) else "No Data"
+        ax_boxes.text(left + box_width / 2, box_height * 0.5, 
+                      label_wkts_eco,
+                      ha='center', va='center', fontsize=9, fontweight='bold', color=text_color)
+        
+        left += box_width
+
+    # Formatting
+    ax_boxes.set_xlim(0, 1)
+    ax_boxes.set_ylim(0, box_height + 0.3) 
+    ax_boxes.axis('off')
+    for spine in ax_boxes.spines.values():
+        spine.set_visible(False)
+    ax_boxes.set_facecolor('white')
+
+    # -----------------------------------------------------------
+    ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
+    
+    plt.tight_layout(pad=0.2)
+    
+    PADDING = 0.008
+
+    bh_bbox = ax_bh.get_position()
+    box_bbox = ax_boxes.get_position()
+    
+    x0_orig = min(bh_bbox.x0, box_bbox.x0)
+    y0_orig = box_bbox.y0
+    x1_orig = max(bh_bbox.x1, box_bbox.x1)
+    y1_orig = bh_bbox.y1
+    
+    x0_pad = x0_orig - PADDING
+    y0_pad = y0_orig - PADDING
+    
+    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
+    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
+
+    border_rect = patches.Rectangle(
+        (x0_pad, y0_pad), 
+        width_pad, 
+        height_pad, 
+        facecolor='none', 
+        edgecolor='black', 
+        linewidth=0.5, 
+        transform=fig.transFigure, 
+        clip_on=False
+    )
+
+    fig.patches.append(border_rect)
+
+    return fig
+
+# --- CHART 2: PITCH MAP (BOUNCE LOCATION) ---
+def create_Spinner_pitch_map(df_in): 
+    # Define Spinner Bins (Delivery Type is fixed as spin)
+    # Bins: 1.2-6: Full, 6-8 Length, 8-10 Short, 10-15 Bouncer
+    PITCH_BINS = {
+         "OP": [-2, 2.8],
+        "Full": [2.8, 4.4],
+        "Good": [4.4, 6.2],
+        "Short": [6.2, 15.0]
+    }
+
+    if df_in.empty:
+        # Create an empty figure with a text note if data is missing
+        fig, ax = plt.subplots(figsize=(4,6))
+        ax.text(0.5, 0.5, f"No data for Spinner Pitch Map", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # --- Data Filtering ---
+    pitch_wickets = df_in[df_in["Wicket"] == True]
+    pitch_non_wickets = df_in[df_in["Wicket"] == False]
+    
+    # --- Chart Setup ---
+    fig, ax = plt.subplots(figsize=(4,6)) # Maintained figsize=(4,6)
+    ax.set_facecolor('white')
+    fig.patch.set_facecolor('white')
+
+    # --- 1. Add Zone Lines & Labels (Horizontal Lines) ---
+    
+    # Determine boundary Y values to draw lines (excluding the start of the lowest bin)
+    boundary_y_values = sorted([v[0] for v in PITCH_BINS.values() if v[0] > -4.0], reverse=True)
+
+    for y_val in boundary_y_values:
+        ax.axhline(y=y_val, color="lightgrey", linewidth=1.0, linestyle="--")
+
+    # Add zone labels (Annotation)
+    for length, bounds in PITCH_BINS.items():
+        if length != "Full Toss": 
+            mid_y = (bounds[0] + bounds[1]) / 2.2
+            # Use ax.text for annotation, positioned on the far left (x=-1.45)
+            ax.text(
+                x=-1.45, 
+                y=mid_y, 
+                s=length.upper(), 
+                ha='left', 
+                va='center', 
+                fontsize=8, 
+                color="grey", 
+                fontweight='bold'
+            )
+
+    
+    # --- 3. Plot Data (Scatter Traces) ---
+    
+    # Non-Wickets (light grey)
+    ax.scatter(
+        pitch_non_wickets["BounceY"], pitch_non_wickets["BounceX"], 
+        s=60, 
+        c='#D3D3D3', 
+        edgecolor='white', 
+        linewidths=1.0, 
+        alpha=0.9,
+        label="No Wicket"
+    )
+
+    # Wickets (red)
+    ax.scatter(
+        pitch_wickets["BounceY"], pitch_wickets["BounceX"], 
+        s=90, 
+        c='red', 
+        edgecolor='white', 
+        linewidths=1.0, 
+        alpha=0.95,
+        label="Wicket"
+    )
+    
+    # --- 2. Add Stump lines (Vertical Lines) ---
+    ax.axvline(x=-0.18, color="#777777", linestyle="--", linewidth=1)
+    ax.axvline(x=0.18, color="#777777", linestyle="--", linewidth=1)
+    ax.axvline(x=0, color="#777777", linestyle="--", linewidth=0.8)
+    
+    # --- 4. Layout (Axis and Spines) ---
+    
+    # Set axis limits
+    ax.set_xlim([-1.5, 1.5])
+    # Reverse the axis to match the cricket visual (batter at bottom)
+    ax.set_ylim([10.0, -4.0]) 
+
+    # Hide all axis elements
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.grid(False)
+    
+    # Hide axis spines (plot border)
+    spine_color = 'black'
+    spine_width = 0.5
+    for spine_name in ['left', 'top', 'bottom','right']:
+        ax.spines[spine_name].set_visible(True)
+        ax.spines[spine_name].set_color(spine_color)
+        ax.spines[spine_name].set_linewidth(spine_width)
+        
+    plt.tight_layout()
+    
+    return fig
+
+# --- CHART 2b: PITCH LENGTH METRICS
+# --- Helper function for Pitch Bins (Hardcoded for spin) ---
+def get_spinner_pitch_bins():
+    return {
+         "OP": [-2, 2.8],
+        "Full": [2.8, 4.4],
+        "Good": [4.4, 6.2],
+        "Short": [6.2, 15.0]
+    }
+def create_Spinner_pitch_length_bars(df_in):
+    # Fixed size to accommodate three stacked charts comfortably
+    FIG_SIZE = (3, 4.5) 
+    
+    if df_in.empty:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, "No Data for Pacer Pitch Length Comparison", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # Get the pitch bins and define order (Fixed for Pacer)
+    PITCH_BINS_DICT = get_spinner_pitch_bins()
+    ordered_keys = ["OP", "Full", "Good" , "Short"]
+    
+    # 1. Data Preparation
+    def assign_pitch_length(x):
+        for length, bounds in PITCH_BINS_DICT.items():
+            if bounds[0] <= x < bounds[1]: return length
+        return None
+
+    df_pitch = df_in.copy()
+    df_pitch["PitchLength"] = df_pitch["BounceX"].apply(assign_pitch_length)
+    
+    # Aggregate data for White Ball metrics
+    df_summary = df_pitch.groupby("PitchLength").agg(
+        Runs=("Runs", "sum"), 
+        Wickets=("Wicket", lambda x: (x == True).sum()), 
+        Balls=("Wicket", "count"),
+        Dots=("Runs", lambda x: (x == 0).sum())
+    ).reset_index().set_index("PitchLength").reindex(ordered_keys).fillna(0)
+    
+    # White Ball Calculations
+    df_summary["Economy"] = df_summary.apply(lambda row: (row["Runs"] / row["Balls"] * 6) if row["Balls"] > 0 else 0.0, axis=1)
+    df_summary["Dismissals"] = df_summary["Wickets"]
+    df_summary["Dot%"] = df_summary.apply(lambda row: (row["Dots"] / row["Balls"] * 100) if row["Balls"] > 0 else 0.0, axis=1)
+    
+    # Categories for plotting (reversed for barh)
+    categories = df_summary.index.tolist()[::-1]
+    
+    # 2. Chart Setup (3 Rows, 1 Column)
+    fig, axes = plt.subplots(3, 1, figsize=FIG_SIZE, sharey=True) 
+    plt.subplots_adjust(hspace=10) 
+
+    # --- Metrics and Titles (Order: Economy, Dismissals, Dot%) ---
+    metrics = ["Economy", "Dismissals", "Dot%"]
+    titles = ["Economy", "Dismissals", "Dot %"]
+
+    # Dynamic limits for scaling
+    max_eco = df_summary["Economy"].max() * 1.2 if df_summary["Economy"].max() > 0 else 12
+    max_wkts = df_summary["Dismissals"].max() * 1.5 if df_summary["Dismissals"].max() > 0 else 5
+    
+    xlim_limits = {
+        "Economy": (0, max_eco),
+        "Dismissals": (0, max_wkts),
+        "Dot%": (0, 100)
+    }
+
+    # --- Plotting Loop ---
+    for i, ax in enumerate(axes):
+        metric = metrics[i]
+        title = titles[i]
+        
+        values = df_summary[metric].values[::-1] 
+        ax.set_xlim(xlim_limits[metric])
+        
+        # Horizontal Bar Chart
+        ax.barh(categories, values, height=0.49, color='#ff5000', zorder=3, alpha=0.9)
+        
+        # --- Annotations ---
+        for j, (cat, val) in enumerate(zip(categories, values)):
+            if metric == "Dismissals":
+                label = f"{int(val)}"
+            elif metric == "Dot%":
+                label = f"{val:.0f}%"
+            else: # Economy
+                label = f"{val:.1f}"
+            
+            ax.text(val, j, label, 
+                    ha='left', va='center', 
+                    fontsize=10, fontweight='bold', color='black',
+                    bbox=dict(facecolor='White', alpha=0.8, edgecolor='none', pad=2),
+                    zorder=4)
+
+        # --- Formatting ---
+        ax.set_title(title, fontsize=10, fontweight='bold', pad=0, loc='left')
+        ax.set_facecolor('white')
+        ax.tick_params(axis='x', labelsize=8)
+        ax.tick_params(axis='y', length=0) 
+
+        if i == 2:
+            ax.set_yticks(np.arange(len(categories)), labels=[c.upper() for c in categories], fontsize=9)
+        else:
+            ax.set_yticks(np.arange(len(categories)), labels=[''] * len(categories))
+            
+        ax.xaxis.grid(False) 
+        ax.yaxis.grid(False)
+        ax.set_xticks([]) 
+        
+        spine_color = 'lightgray'
+        for spine_name in ['left', 'right', 'top', 'bottom']:
+            ax.spines[spine_name].set_visible(True)
+            ax.spines[spine_name].set_color(spine_color)
+            ax.spines[spine_name].set_linewidth(1.0)
+            
+    plt.tight_layout(pad=0.5)
+    return fig
+
+    
+# --- CHART 3: RELEASE SPEED DISTRIBUTION ---
+def create_Spinner_release_speed_distribution(df_in, handedness_label):
+    FIG_SIZE = (4, 4.4)
+
+    if df_in.empty or "ReleaseSpeed" not in df_in.columns or df_in["ReleaseSpeed"].empty:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No Data or Missing 'ReleaseSpeed' for {handedness_label}", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # 1. Prepare Data and Determine Histogram Parameters
+    speeds = df_in["ReleaseSpeed"].dropna().values
+    speeds = speeds[(speeds >= 50) & (speeds <= 155)]
+
+    total_balls = len(speeds)
+    
+    if total_balls == 0:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, "No Deliveries Found", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # Calculate the range to ensure fixed bin width of 5 km/h
+    min_speed = np.floor(speeds.min() / 5) * 5
+    max_speed = np.ceil(speeds.max() / 5) * 5
+    
+    # Generate bins with a fixed width of 5 km/h
+    bin_width = 5
+    bins = np.arange(min_speed, max_speed + bin_width, bin_width)
+    
+    # Calculate histogram counts and edges
+    counts, bin_edges = np.histogram(speeds, bins=bins)
+    
+    # 2. Process Data for Plotting & Filtering
+    raw_percentages = (counts / total_balls) * 100
+    valid_counts = []
+    valid_bin_labels = []
+    
+    for i in range(len(counts)):
+        if raw_percentages[i] >= 1.0:
+            lower = int(bin_edges[i])
+            upper = int(bin_edges[i+1])
+            label = f"{lower}-{upper}"
+            
+            valid_counts.append(counts[i])
+            valid_bin_labels.append(label)
+
+    if not valid_counts:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No Bins Meet the {MIN_BALLS}-Ball Minimum Filter", ha='center', va='center', fontsize=10)
+        ax.axis('off')
+        return fig
+        
+    # Calculate percentages for valid bins only
+    valid_percentages = (np.array(valid_counts) / total_balls) * 100
+    
+    # Reverse order for horizontal bar chart (fastest speeds typically at the top)
+    plot_percentages = valid_percentages[::-1]
+    plot_labels = valid_bin_labels[::-1]
+    plot_counts = valid_counts[::-1]
+    
+    # 3. Chart Generation (Horizontal Bar / Histogram)
+    
+    fig, ax = plt.subplots(figsize=FIG_SIZE)
+    
+    
+    y_pos = np.arange(len(plot_labels))
+    
+    ax.barh(
+        y_pos,
+        plot_percentages,
+        color='#ff5000', # Single, uniform color
+        height=0.6
+    )
+
+    
+    # Add percentage labels
+    # Add percentage labels
+    for i, pct in enumerate(plot_percentages):
+        count = plot_counts[i]
+        # Display percentage (e.g., 25%)
+        label_text = f'{pct:.0f}%'
+    
+
+        x_pos = pct + 0.5 
+        # 2. ha: Align the start of the text to x_pos
+        ha = 'left' 
+        text_color = 'black'
+    
+        ax.text(
+        x_pos, 
+        i, 
+        label_text, 
+        ha=ha, va='center', fontsize=12, color=text_color, fontweight='bold'
+    )
+
+
+    # 4. Formatting
+    
+    # Set Y-axis labels
+    ax.set_yticks(y_pos, labels=plot_labels, fontsize=10)
+    
+    # Set X-axis limit slightly higher than the max percentage for clean labels
+    max_pct = np.max(plot_percentages) if len(plot_percentages) > 0 else 0
+    ax.set_xlim(0, max(max_pct * 1.1, 10)) 
+    
+    # Hide axis ticks/labels
+    ax.set_xticklabels([])
+    ax.set_xticks([])
+    
+    # Remove all spines 
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    # --- ADDING SHARP BORDER ---
+    # We create a custom Rectangle patch with 'miter' joinstyle and add it to the figure.
+    # Get the bounding box of the axes in figure coordinates
+    ax_bbox = ax.get_position()
+    
+    # Calculate padding based on figure dimensions to ensure a consistent border
+    # Use 0.01 for x and y to give a small padding
+    padding_x = 0.2* FIG_SIZE[0] / fig.get_size_inches()[0] # Scale padding based on total figure width
+    padding_y = 0.01 * FIG_SIZE[1] / fig.get_size_inches()[1] # Scale padding based on total figure height
+
+    border_rect = patches.Rectangle(
+        (ax_bbox.x0 - padding_x, ax_bbox.y0 - padding_y), # Start (x,y)
+        ax_bbox.width + 2 * padding_x,                    # Width
+        ax_bbox.height + 2 * padding_y,                   # Height
+        facecolor='none',
+        edgecolor='black',
+        linewidth=0.5,
+        transform=fig.transFigure, # Use figure coordinates
+        clip_on=False,             # Ensure it's not clipped
+        joinstyle='miter'          # THIS ENSURES SHARP CORNERS
+    )
+    fig.add_artist(border_rect) # Add the custom rectangle to the figure
+
+    return fig
+
+# Chart 4 Bowler Release Map
+def create_Spinner_release_analysis(df_in, handedness_label): 
+    FIG_SIZE = (4, 3.4) # Increased height for both charts
+
+    if df_in.empty or "ReleaseY" not in df_in.columns or "ReleaseZ" not in df_in.columns:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No data for Release Analysis vs. {handedness_label}", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # --- 1. Calculate Lateral Release Performance (LEFT vs RIGHT) ---
+    df_temp = df_in.copy()
+    
+    # Categorize based on ReleaseY sign
+    df_temp["ReleaseCategory"] = np.where(
+        df_temp["ReleaseY"] < 0, "LEFT (<0)", 
+        np.where(df_temp["ReleaseY"] > 0, "RIGHT (>0)", "CENTER (=0)")
+    )
+    
+    df_temp = df_temp[df_temp["ReleaseCategory"] != "CENTER (=0)"]
+    
+    # Calculation functions
+    def calculate_ba(row):
+        # Use np.nan as a flag for "N/A"
+        return row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else np.nan
+
+    def calculate_sr(row):
+        # Strike Rate = Balls per Wicket (normalized by 6 for Cricket SR)
+        return (row["Balls"] / row["Wickets"]) if row["Wickets"] > 0 else np.nan
+        
+    summary = df_temp.groupby("ReleaseCategory").agg(
+        Wickets=("Wicket", lambda x: (x == True).sum()),
+        Runs=("Runs", "sum"),
+        Balls=("Wicket", "count")
+    )
+
+    # Ensure both categories are present for consistent plotting
+    summary = summary.reindex(["LEFT (<0)", "RIGHT (>0)"]).fillna(0)
+    
+    summary["BA"] = summary.apply(calculate_ba, axis=1)
+    summary["SR"] = summary.apply(calculate_sr, axis=1)
+
+    # Formatting helper
+    def format_metric(value, is_wickets=False):
+        if is_wickets:
+            return f"{int(value)}"
+        if np.isnan(value) or value == np.inf:
+            return "N/A"
+        return f"{value:.1f}"
+
+    left = summary.loc["LEFT (<0)"]
+    right = summary.loc["RIGHT (>0)"]
+
+    # --- 2. Setup Figure and GridSpec ---
+    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1.2], hspace=0.1)
+    
+    ax_map = fig.add_subplot(gs[0, 0])
+    ax_metrics = fig.add_subplot(gs[1, 0])
+
+    # --- 3. Plot Release Zone Map (ax_map) ---
+    
+    release_wickets = df_in[df_in["Wicket"] == True]
+    release_non_wickets = df_in[df_in["Wicket"] == False]
+    
+    # Non-Wickets (light grey)
+    ax_map.scatter(
+        release_non_wickets["ReleaseY"], release_non_wickets["ReleaseZ"], 
+        s=40, color='#D3D3D3', alpha=0.8, edgecolors='white', linewidths=0.5, label="No Wicket"
+    )
+
+    # Wickets (red)
+    ax_map.scatter(
+        release_wickets["ReleaseY"], release_wickets["ReleaseZ"], 
+        s=80, color='red', alpha=1.0, edgecolors='white', linewidths=1.0, label="Wicket", zorder=5
+    )
+    
+    # Add Stump Lines
+    stump_lines = [-0.18, 0, 0.18]
+    for y_val in stump_lines:
+        ax_map.axvline(x=y_val, color="#777777", linestyle="--", linewidth=1.0)
+    
+    # Formatting Map
+    ax_map.set_xlim(-1.5, 1.5)
+    ax_map.set_ylim(0.5, 2.5)
+    ax_map.set_xticks([])
+    ax_map.set_yticks([])
+    ax_map.set_facecolor('white')
+    ax_map.grid(True)
+
+    
+    # Hide all map spines
+    for spine in ax_map.spines.values():
+        spine.set_visible(False)
+        
+    # --- 4. Draw Lateral Metrics Table (ax_metrics) ---
+    
+    # Hide all metrics spines/ticks/labels
+    ax_metrics.axis('off')
+    ax_metrics.set_xlim(0, 1)
+    ax_metrics.set_ylim(-0.5, 1)
+
+    # Titles
+    # Metric Labels (Left Alignment for labels)
+    ax_metrics.text(0.05, 1, "W:", ha='right', va='center', fontsize=10, fontweight='bold')
+    ax_metrics.text(0.05, 0.5, "Avg:", ha='right', va='center', fontsize=10, fontweight='bold')
+    ax_metrics.text(0.05, 0, "SR:", ha='right', va='center', fontsize=10, fontweight='bold')
+
+    # LEFT Values
+    ax_metrics.text(0.2, 1, format_metric(left["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.2, 0.5, format_metric(left["BA"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.2, 0, format_metric(left["SR"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+
+    # RIGHT Values
+    ax_metrics.text(0.9, 1, format_metric(right["Wickets"], is_wickets=True), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.9, 0.5, format_metric(right["BA"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    ax_metrics.text(0.9, 0, format_metric(right["SR"]), ha='center', va='center', fontsize=12, color='black', fontweight='bold')
+    
+    # --- 5. Add Sharp Border to Figure ---
+    plt.tight_layout(pad=0.1)
+    
+    # Create and add a custom Rectangle patch for sharp border
+    ax_bbox = ax_map.get_position()
+    # Calculate padding relative to figure size
+    padding_x = 0.001 * FIG_SIZE[0] / fig.get_size_inches()[0] 
+    padding_y = 0.001 * FIG_SIZE[1] / fig.get_size_inches()[1] 
+    
+    border_rect = patches.Rectangle(
+        (0.05, 0.13), 
+        0.9, 
+        0.8, 
+        facecolor='none',
+        edgecolor='black',
+        linewidth=0.5,
+        transform=fig.transFigure,
+        clip_on=False,
+        joinstyle='miter' # Ensures sharp corners
+    )
+    fig.add_artist(border_rect)
+
+    return fig
+
+# Chart 5: Drift Distribution
+def create_swing_distribution_histogram(df_in, handedness_label):
+    FIG_SIZE = (5, 4) 
+
+    # 0. Initial Check and Data Preparation
+    if df_in.empty or "Swing" not in df_in.columns:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No Swing data for ({handedness_label})", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    df_data = df_in["Swing"].dropna().astype(float)
+    df_data = df_data[(df_data >= -10) & (df_data <= 10)]
+    
+    if df_data.empty:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No valid Swing data for ({handedness_label})", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # --- 1. Histogram Data Preparation (Top Chart) ---
+    min_Swing = np.floor(df_data.min())
+    max_Swing = np.ceil(df_data.max())
+    bins = np.arange(min_Swing, max_Swing + 1.1, 1) 
+    
+    counts, _ = np.histogram(df_data, bins=bins)
+    total_balls = len(df_data)
+    percentages = (counts / total_balls) * 100
+    lower_bin_edges = bins[:-1] 
+    bar_centers = (bins[:-1] + bins[1:]) / 2
+    bar_width = 0.9 
+
+    # --- 2. Directional Split Data Preparation & Coloring (Bottom Chart) ---
+    
+    # Logic: < 0 is LEFT, >= 0 is RIGHT (to match the example image logic)
+    left_count = (df_data < 0).sum()
+    right_count = (df_data >= 0).sum()
+    
+    total_split = left_count + right_count
+    
+    if total_split > 0:
+        left_pct = (left_count / total_split) * 100
+        right_pct = (right_count / total_split) * 100
+    else:
+        left_pct, right_pct = 0, 0
+        
+    # Dynamic Color Assignment: Darker shade for the larger percentage
+    DARK_SHADE = '#ff5000'  # Primary, darker red
+    LIGHT_SHADE = '#FDD0A2' # Secondary, lighter orange
+
+    if left_pct >= right_pct:
+        left_bar_color = DARK_SHADE
+        right_bar_color = LIGHT_SHADE
+    else:
+        left_bar_color = LIGHT_SHADE
+        right_bar_color = DARK_SHADE
+
+    # --- 3. Matplotlib Setup and GridSpec ---
+    # Adjusted height ratio and HSPACE for tighter layout
+    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.3)
+    
+    ax_hist = fig.add_subplot(gs[0, 0])
+    ax_split = fig.add_subplot(gs[1, 0])
+
+    # --- 4. Plot Histogram (ax_hist) ---
+    rects = ax_hist.bar(bar_centers, percentages, width=bar_width, color='#ff5000', linewidth=1.0)
+    
+    # ax_hist.set_title(...) --- REMOVED TITLE per user request ---
+    
+    # Annotation (Percentages on top of bars)
+    for rect, pct in zip(rects, percentages):
+        if pct > 0.5: 
+            height = rect.get_height()
+            ax_hist.text(rect.get_x() + rect.get_width() / 2., height + 0.5,
+                        f'{pct:.0f}%',
+                        ha='center', va='bottom', fontsize=12, weight='bold')
+    
+    ax_hist.set_ylim(0, percentages.max() * 1.35 if percentages.max() > 0 else 10)
+    
+    # Formatting Histogram Axis
+    ax_hist.set_xticks(lower_bin_edges)
+    ax_hist.set_xticklabels([f"{b:.0f}" for b in lower_bin_edges], ha='center', fontsize=10) 
+    ax_hist.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+    
+    # Hide all spines for ax_hist
+    for spine_name in ['left', 'top', 'bottom', 'right']:
+        ax_hist.spines[spine_name].set_visible(False)
+    
+    # --- 5. Plot Directional Split (ax_split) ---
+    
+    # Create the 100% stacked bar chart (ax_split)
+    ax_split.barh([0.5], [left_pct], height=1, color=left_bar_color, left=0)
+    ax_split.barh([0.5], [right_pct], height=1, color=right_bar_color, left=left_pct)
+
+    # Annotations for percentage labels
+    if left_pct > 5: 
+        ax_split.text(left_pct / 2, 0.5, f"LEFT\n{left_pct:.0f}%", 
+                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
+    if right_pct > 5:
+        ax_split.text(left_pct + right_pct / 2, 0.5, f"RIGHT\n{right_pct:.0f}%", 
+                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
+
+    # Formatting Split Axis
+    ax_split.set_xlim(0, 100)
+    ax_split.set_ylim(0, 1) 
+    ax_split.axis('off') 
+    
+    # --- 6. Add Sharp Border to Figure ---
+    # Reduced padding here for closer border
+    plt.tight_layout(pad=0.01)
+    
+    # Normalized figure coordinates for precise placement
+    border_rect = patches.Rectangle(
+        (0.1, 0.08), 
+        0.82,          
+        0.8,          
+        facecolor='none',
+        edgecolor='black',
+        linewidth=0.5,
+        transform=fig.transFigure,
+        clip_on=False,
+        joinstyle='miter' 
+    )
+    fig.add_artist(border_rect)
+    return fig
+    
+#Chart 6 Deviation Dstribution Histogram
+def create_deviation_distribution_histogram(df_in, handedness_label):
+    FIG_SIZE = (5, 4) 
+
+    # 0. Initial Check and Data Preparation
+    if df_in.empty or "Deviation" not in df_in.columns:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No Deviation data for ({handedness_label})", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    df_data = df_in["Deviation"].dropna().astype(float)
+    df_data = df_data[(df_data >= -10) & (df_data <= 10)]
+    
+    if df_data.empty:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No valid Deviation data for ({handedness_label})", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # --- 1. Histogram Data Preparation (Top Chart) ---
+    min_Deviation = np.floor(df_data.min())
+    max_Deviation = np.ceil(df_data.max())
+    bins = np.arange(min_Deviation, max_Deviation + 1.1, 1) 
+    
+    counts, _ = np.histogram(df_data, bins=bins)
+    total_balls = len(df_data)
+    percentages = (counts / total_balls) * 100
+    lower_bin_edges = bins[:-1] 
+    bar_centers = (bins[:-1] + bins[1:]) / 2
+    bar_width = 0.9 
+
+    # --- 2. Directional Split Data Preparation & Coloring (Bottom Chart) ---
+    
+    # Logic: < 0 is LEFT, >= 0 is RIGHT (to match the example image logic)
+    left_count = (df_data < 0).sum()
+    right_count = (df_data >= 0).sum()
+    
+    total_split = left_count + right_count
+    
+    if total_split > 0:
+        left_pct = (left_count / total_split) * 100
+        right_pct = (right_count / total_split) * 100
+    else:
+        left_pct, right_pct = 0, 0
+        
+    # Dynamic Color Assignment: Darker shade for the larger percentage
+    DARK_SHADE = '#ff5000'  # Primary, darker red
+    LIGHT_SHADE = '#FDD0A2' # Secondary, lighter orange
+
+    if left_pct >= right_pct:
+        left_bar_color = DARK_SHADE
+        right_bar_color = LIGHT_SHADE
+    else:
+        left_bar_color = LIGHT_SHADE
+        right_bar_color = DARK_SHADE
+
+    # --- 3. Matplotlib Setup and GridSpec ---
+    # Adjusted height ratio and HSPACE for tighter layout
+    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1], hspace=0.3)
+    
+    ax_hist = fig.add_subplot(gs[0, 0])
+    ax_split = fig.add_subplot(gs[1, 0])
+
+    # --- 4. Plot Histogram (ax_hist) ---
+    rects = ax_hist.bar(bar_centers, percentages, width=bar_width, color= LIGHT_SHADE, linewidth=1.0)
+    
+    # ax_hist.set_title(...) --- REMOVED TITLE per user request ---
+    
+    # Annotation (Percentages on top of bars)
+    for rect, pct in zip(rects, percentages):
+        if pct > 0.5: 
+            height = rect.get_height()
+            ax_hist.text(rect.get_x() + rect.get_width() / 2., height + 0.5,
+                        f'{pct:.0f}%',
+                        ha='center', va='bottom', fontsize=12, weight='bold')
+    
+    ax_hist.set_ylim(0, percentages.max() * 1.35 if percentages.max() > 0 else 10)
+    
+    # Formatting Histogram Axis
+    ax_hist.set_xticks(lower_bin_edges)
+    ax_hist.set_xticklabels([f"{b:.0f}" for b in lower_bin_edges], ha='center', fontsize=10) 
+    ax_hist.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+    
+    # Hide all spines for ax_hist
+    for spine_name in ['left', 'top', 'bottom', 'right']:
+        ax_hist.spines[spine_name].set_visible(False)
+    
+    # --- 5. Plot Directional Split (ax_split) ---
+    
+    # Create the 100% stacked bar chart (ax_split)
+    ax_split.barh([0.5], [left_pct], height=1, color='#ff5000', left=0)
+    ax_split.barh([0.5], [right_pct], height=1, color=right_bar_color, left=left_pct)
+
+    # Annotations for percentage labels
+    if left_pct > 5: 
+        ax_split.text(left_pct / 2, 0.5, f"LEFT\n{left_pct:.0f}%", 
+                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
+    if right_pct > 5:
+        ax_split.text(left_pct + right_pct / 2, 0.5, f"RIGHT\n{right_pct:.0f}%", 
+                      ha='center', va='center', color='white', fontsize=14, fontweight='bold')
+
+    # Formatting Split Axis
+    ax_split.set_xlim(0, 100)
+    ax_split.set_ylim(0, 1) 
+    ax_split.axis('off') 
+    
+    # --- 6. Add Sharp Border to Figure ---
+    # Reduced padding here for closer border
+    plt.tight_layout(pad=0.01)
+    
+    # Normalized figure coordinates for precise placement
+    border_rect = patches.Rectangle(
+        (0.1, 0.08), 
+        0.82,          
+        0.8,          
+        facecolor='none',
+        edgecolor='black',
+        linewidth=0.5,
+        transform=fig.transFigure,
+        clip_on=False,
+        joinstyle='miter' 
+    )
+    fig.add_artist(border_rect)
+    return fig
+
+# Chart 7 Spinners Hitting Missing
+def create_spinner_hitting_missing(df_in, handedness_label):
+
+    FIG_SIZE = (7, 5.5)
+
+    # Early exit if empty
+    if df_in.empty:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, f"No data for Hitting/Missing Analysis ({handedness_label})",
+                ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    df_map = df_in.copy()
+
+    # 1. Define HITTING / MISSING
+    is_hitting_target = (
+        (df_map["StumpsY"] >= -0.18) &
+        (df_map["StumpsY"] <= 0.18) &
+        (df_map["StumpsZ"] >= 0) &
+        (df_map["StumpsZ"] <= 0.78)
+    )
+    df_map["HittingCategory"] = np.where(is_hitting_target, "HITTING", "MISSING")
+
+    # 2. Percentages
+    counts = df_map["HittingCategory"].value_counts(normalize=True).mul(100).round(1)
+    hitting_pct = counts.get("HITTING", 0.0)
+    missing_pct = counts.get("MISSING", 0.0)
+
+    # 3. Figure + Grid
+    fig = plt.figure(figsize=FIG_SIZE, facecolor='white')
+    gs = GridSpec(2, 3, figure=fig, height_ratios=[4, 1], wspace=0.3, hspace=0.25)
+
+    ax_map = fig.add_subplot(gs[0, :])
+    ax_wickets = fig.add_subplot(gs[1, 0])
+    ax_ba = fig.add_subplot(gs[1, 1])
+    ax_sr = fig.add_subplot(gs[1, 2])
+
+    # 4. MAP
+    df_missing_no_wicket = df_map[(df_map["HittingCategory"] == "MISSING") & (df_map["Wicket"] == False)]
+    df_hitting_no_wicket = df_map[(df_map["HittingCategory"] == "HITTING") & (df_map["Wicket"] == False)]
+    df_wicket = df_map[df_map["Wicket"] == True]
+
+    # Box lines
+    ax_map.axvline(x=-0.18, color='grey', linestyle='--', linewidth=1)
+    ax_map.axvline(x=0, color='grey', linestyle=':', linewidth=1)
+    ax_map.axvline(x=0.18, color='grey', linestyle='--', linewidth=1)
+    ax_map.axhline(y=0.78, color='grey', linestyle='--', linewidth=1)
+    ax_map.axhline(y=0, color='grey', linestyle='-', linewidth=1)
+
+    # Points
+    ax_map.scatter(df_missing_no_wicket["StumpsY"], df_missing_no_wicket["StumpsZ"],
+                   color='#D3D3D3', s=45, edgecolor='white', linewidth=0.4, alpha=0.8)
+    ax_map.scatter(df_hitting_no_wicket["StumpsY"], df_hitting_no_wicket["StumpsZ"],
+                   color='#3b3b3b', s=55, edgecolor='white', linewidth=0.4, alpha=0.9)
+    ax_map.scatter(df_wicket["StumpsY"], df_wicket["StumpsZ"],
+                   color='red', s=65, edgecolor='white', linewidth=0.6, zorder=25)
+
+    ax_map.set_xlim(-1.1, 1.1)
+    ax_map.set_ylim(0, 1.4)
+    ax_map.axis('off')
+
+    # Labels
+    ax_map.text(0.74, 1.4, f"Hitting: {hitting_pct:.0f}%",
+                transform=ax_map.transData, ha='right', va='top',
+                fontsize=10, color='#3b3b3b', weight='bold')
+    ax_map.text(1.2, 1.4, f"Missing: {missing_pct:.0f}%",
+                transform=ax_map.transData, ha='right', va='top',
+                fontsize=10, color='#D3D3D3', weight='bold')
+
+    # 5. SUMMARY TABLE
+    summary = df_map.groupby("HittingCategory").agg(
+        Wickets=("Wicket", lambda x: (x == True).sum()),
+        Runs=("Runs", "sum"),
+        Balls=("Wicket", "count")
+    )
+
+    # Ensure both, correct order
+    for cat in ["HITTING", "MISSING"]:
+        if cat not in summary.index:
+            summary.loc[cat] = [0, 0, 0]
+
+    summary = summary.reindex(["HITTING", "MISSING"])
+
+    summary["BA"] = summary.apply(lambda r: r["Runs"] / r["Wickets"] if r["Wickets"] > 0 else 0, axis=1)
+    summary["SR"] = summary.apply(lambda r: r["Balls"] / r["Wickets"] if r["Wickets"] > 0 else 0, axis=1)
+
+    metrics_data = {
+        "Wickets": {"data": summary["Wickets"].tolist(), "title": "Wickets"},
+        "BA": {"data": summary["BA"].tolist(), "title": "Average"},
+        "SR": {"data": summary["SR"].tolist(), "title": "Strike Rate"},
+    }
+
+    max_values = {
+        "Wickets": summary["Wickets"].max() * 1.2 if summary["Wickets"].max() > 0 else 5,
+        "BA": summary["BA"].replace([np.inf], np.nan).max() * 1.2 if summary["BA"].max() > 0 else 100,
+        "SR": summary["SR"].replace([np.inf], np.nan).max() * 1.2 if summary["SR"].max() > 0 else 100,
+    }
+
+    bar_colors = ["#3b3b3b", "#D3D3D3"]
+    y_labels = ["HITTING", "MISSING"]
+    axes = [ax_wickets, ax_ba, ax_sr]
+
+    # 6. PLOTTING METRICS
+    for i, (metric, meta) in enumerate(metrics_data.items()):
+        ax = axes[i]
+        bars = ax.barh(y_labels, meta["data"], color=bar_colors, height=0.5)
+        ax.invert_yaxis()
+        ax.set_title(meta["title"], fontsize=10, pad=5)
+        ax.set_xlim(0, max_values[metric])
+        ax.xaxis.set_visible(False)
+
+        if i == 0:
+            ax.tick_params(axis='y', length=0)
+            ax.set_yticks([0, 1])
+            ax.set_yticklabels(y_labels, fontsize=10, weight='bold')
+        else:
+            ax.yaxis.set_visible(False)
+
+        for bar, value in zip(bars, meta["data"]):
+            text = "N/A" if np.isnan(value) else f"{value:.1f}" if metric != "Wickets" else f"{int(value)}"
+            ax.text(bar.get_width() + 0.5,
+                    bar.get_y() + bar.get_height() / 2,
+                    text, ha='left', va='center', fontsize=9, weight='bold')
+
+        for spine in ["right", "top", "bottom", "left"]:
+            ax.spines[spine].set_visible(False)
+
+        ax.grid(False)
+
+    # 7. BORDER (outside loop)
+    plt.tight_layout(pad=0.01)
+    border_rect = patches.Rectangle(
+        (0.005, 0.09),
+        0.99,
+        0.85,
+        facecolor='none',
+        edgecolor='black',
+        linewidth=0.5,
+        transform=fig.transFigure
+    )
+    fig.add_artist(border_rect)
+
+    return fig
+    
+# Chart 7: Interception side-on
+# --- Helper function for Interception Bins ---
+def get_interception_bins():
+    """Defines the bins for the Crease Width Split chart."""
+    return {
+        "0m-1m": [0, 1],
+        "1m-2m": [1, 2],
+        "2m-3m": [2, 3],
+        "3m+": [3, 100]  # Assuming max possible value is < 100
+    }
+def create_spinner_interception_side_on(df_in):
+    # Standard dimensions for spinners (extended X-axis for flight)
+    FIG_WIDTH = 7
+    FIG_HEIGHT = 5
+    FIG_SIZE = (FIG_WIDTH, FIG_HEIGHT)
+
+    if df_in.empty or df_in["InterceptionX"].isnull().all():
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, "No Interception Data", ha='center', va='center')
+        ax.axis('off')
+        return fig
+
+    # Setup Grid
+    fig = plt.figure(figsize=FIG_SIZE)
+    gs = fig.add_gridspec(2, 1, height_ratios=[4, 1.2], hspace=0.1) 
+    ax_scatter = fig.add_subplot(gs[0, 0])
+    ax_bar = fig.add_subplot(gs[1, 0])
+    fig.patch.set_facecolor('white')
+
+    # --- PART 1: SCATTER PLOT (Spinner Path) ---
+    df_int = df_in[df_in["InterceptionX"] > -999].copy()
+    
+    # 1. Define the subsets to control layering
+    df_wickets = df_int[df_int["Wicket"] == True]
+    df_boundaries = df_int[(df_int["Runs"].isin([4, 6])) & (df_int["Wicket"] == False)]
+    df_other = df_int[(~df_int["Runs"].isin([4, 6])) & (df_int["Wicket"] == False)]
+
+    # 2. Plot in Order: Bottom to Top
+    # First: Other (Grey)
+    ax_scatter.scatter(
+        df_other["InterceptionX"] + 10, df_other["InterceptionZ"], 
+        color='#D3D3D3', edgecolors='white', linewidths=0.3, s=50, alpha=0.7, label="Other"
+    )
+
+    # Second: Boundaries (Blue)
+    ax_scatter.scatter(
+        df_boundaries["InterceptionX"] + 10, df_boundaries["InterceptionZ"], 
+        color='royalblue', edgecolors='white', linewidths=0.3, s=55, alpha=0.9, label="Boundary"
+    )
+
+    # Third: Wickets (Red) - This stays on top
+    ax_scatter.scatter(
+        df_wickets["InterceptionX"] + 10, df_wickets["InterceptionZ"], 
+        color='red', edgecolors='white', linewidths=0.3, s=65, alpha=1.0, label="Wicket"
+    )
+
+    # Reference Lines (Spinners usually play further forward, so we show up to 4m)
+    line_specs = {0.0: "Stumps", 1.25: "Crease", 2.0: "2m", 3.0: "3m", 4.0: "4m"}
+    for x_val, label in line_specs.items():
+        ax_scatter.axvline(x=x_val, color='lightgrey', linestyle='--', linewidth=0.8)
+        ax_scatter.text(x_val, 1.45, label, ha='center', fontsize=8, color='grey')
+    
+    ax_scatter.axhline(y=0.78, color="grey", linestyle="-", linewidth=0.5, alpha=0.5)
+    ax_scatter.set_xlim(-0.2, 4.5) # Wider range for spinners
+    ax_scatter.set_ylim(0, 1.5)
+    ax_scatter.axis('off')
+
+    # --- PART 2: METRIC BARS (By Batting SR) ---
+    INTERCEPTION_BINS = {"0-1m": [0, 1], "1-2m": [1, 2], "2-3m": [2, 3], "3m+": [3, 100]}
+    ordered_keys = ["0-1m", "1-2m", "2-3m", "3m+"]
+
+    def assign_bin(x):
+        for k, v in INTERCEPTION_BINS.items():
+            if v[0] <= x < v[1]: return k
+        return None
+
+    df_int["Bin"] = (df_int["InterceptionX"] + 10).apply(assign_bin)
+    
+    summary = df_int.groupby("Bin").agg(
+        Runs=("Runs", "sum"),
+        Balls=("Runs", "count"),
+        Wickets=("Wicket", "sum")
+    ).reindex(ordered_keys).fillna(0)
+
+    # Calculations
+    summary["SR"] = (summary["Runs"] / summary["Balls"] * 100).fillna(0)
+    summary["Eco"] = (summary["Runs"] / summary["Balls"] * 6).fillna(0)
+
+    # Styling
+    cmap = cm.get_cmap('Wistia')
+    norm = mcolors.Normalize(vmin=0, vmax=max(summary["SR"].max(), 150))
+    box_width = 1.0 / len(ordered_keys)
+
+    for i, (label, row) in enumerate(summary.iterrows()):
+        curr_color = cmap(norm(row["SR"]))
+        left_pos = i * box_width
+        
+        # Draw Box
+        ax_bar.barh(0.5, box_width, left=left_pos, color=curr_color, edgecolor='black', height=0.5)
+        
+        # Determine Text Color based on background darkness
+        lum = 0.2126 * curr_color[0] + 0.7152 * curr_color[1] + 0.0722 * curr_color[2]
+        t_color = 'white' if lum < 0.5 else 'black'
+
+        # Multi-line text for metrics
+        metric_text = f"SR: {row['SR']:.0f}\nEco: {row['Eco']:.1f}\n{int(row['Wickets'])}W"
+        
+        ax_bar.text(left_pos + box_width/2, 0.5, metric_text, 
+                    ha='center', va='center', fontsize=8, fontweight='bold', color=t_color)
+        
+        # Bin Label
+        ax_bar.text(left_pos + box_width/2, 0.9, label, ha='center', va='bottom', fontsize=9)
+
+    ax_bar.set_xlim(0, 1)
+    ax_bar.set_ylim(0, 1)
+    ax_bar.axis('off')
+
+    # ----------------------------------------------------------------------
+    ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
+    # ----------------------------------------------------------------------
+    
+    plt.tight_layout(pad=0.1) 
+    
+    PADDING = 0.004
+
+    # Get the bounding box of the top (scatter) and bottom (bar) charts
+    scatter_bbox = ax_scatter.get_position()
+    bar_bbox = ax_bar.get_position() 
+    # Determine the total bounds (figure coordinates)
+    x0_orig = scatter_bbox.x0         
+    y0_orig = bar_bbox.y0  
+    x1_orig = scatter_bbox.x1     
+    y1_orig = scatter_bbox.y1         
+    
+    # Apply Padding
+    x0_pad = x0_orig - PADDING
+    y0_pad = y0_orig - PADDING
+    
+    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
+    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
+
+    # Draw the custom Rectangle 
+    border_rect = patches.Rectangle(
+        (x0_pad-0.008, y0_pad+0.02), 
+        width_pad+0.017, 
+        height_pad,  
+        facecolor='none', 
+        edgecolor='black', 
+        linewidth=0.5, 
+        transform=fig.transFigure, 
+        clip_on=False
+    )
+
+    fig.patches.append(border_rect)
+
+    return fig
+
+
+
+# Chart 8: Speed group ditribution overall
+def create_spinner_speed_effectiveness_2col(df_in):
+    if df_in.empty:
+        fig, ax = plt.subplots(figsize=(6, 2))
+        ax.text(0.5, 0.5, "No Data", ha='center', va='center')
+        ax.axis('off')
+        return fig
+
+    df_temp = df_in.copy()
+    df_temp["ReleaseSpeed"] = pd.to_numeric(df_temp["ReleaseSpeed"], errors='coerce')
+    df_temp = df_temp.dropna(subset=["ReleaseSpeed"])
+    # Filter for speed between 50 and 150
+    df_temp = df_temp[(df_temp["ReleaseSpeed"] >= 50) & (df_temp["ReleaseSpeed"] <= 150)]
+    
+    if df_temp.empty:
+        fig, ax = plt.subplots(figsize=(4, 1))
+        ax.text(0.5, 0.5, "No Speed Data Available", ha='center', va='center')
+        ax.axis('off')
+        return fig
+
+    # 1. Dynamic Binning with size 10
+    # We find the min/max speed to create relevant bins (e.g., 70, 80, 90, 100)
+    min_s = floor(df_temp["ReleaseSpeed"].min() / 10) * 10
+    max_s = ceil(df_temp["ReleaseSpeed"].max() / 10) * 10
+    bins = np.arange(min_s, max_s + 10, 10)
+    
+    # Create labels like "70-80", "80-90"
+    labels = [f"{int(bins[i])}-{int(bins[i+1])}" for i in range(len(bins)-1)]
+    
+    df_temp["SpeedGroup"] = pd.cut(df_temp["ReleaseSpeed"], bins=bins, labels=labels, include_lowest=True)
+    
+    # 2. Aggregate Data
+    summary = df_temp.groupby("SpeedGroup").agg(
+        Runs=("Runs", "sum"), 
+        Balls=("Runs", "count"),
+        Dots=("Runs", lambda x: (x == 0).sum()),
+        Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum())
+    ).reindex(labels[::-1]).fillna(0) # Reversed to show faster speeds at the top
+    
+    # White Ball Metrics
+    summary["Bd%"] = (summary["Boundaries"] / summary["Balls"] * 100).fillna(0)
+    summary["Dot%"] = (summary["Dots"] / summary["Balls"] * 100).fillna(0)
+
+    # 3. Plotting (1 row, 2 columns)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(5, 2.7), sharey=True)
+    plt.subplots_adjust(wspace=0.4) 
+    
+    y = np.arange(len(summary.index))
+    height = 0.4
+    color_spinner = '#ff5000' # Using a Blue shade to differentiate from Pacers
+
+    # --- Column 1: Boundary % ---
+    ax1.barh(y, summary["Bd%"], color=color_spinner, edgecolor='white', height=height)
+    ax1.set_title("Boundary %", fontsize=12, fontweight='bold')
+    ax1.set_yticks(y)
+    ax1.set_yticklabels(summary.index, fontsize=11)
+    ax1.set_xlim(0, 100)
+    for i, v in enumerate(summary["Bd%"]):
+        if summary["Balls"].iloc[i] > 0:
+            ax1.text(v + 2, i, f'{v:.0f}%', va='center', fontweight='bold', fontsize=10)
+
+    # --- Column 2: Dot % ---
+    ax2.barh(y, summary["Dot%"], color=color_spinner, edgecolor='white', height=height)
+    ax2.set_title("Dot %", fontsize=12, fontweight='bold')
+    ax2.set_xlim(0, 100)
+    for i, v in enumerate(summary["Dot%"]):
+        if summary["Balls"].iloc[i] > 0:
+            ax2.text(v + 2, i, f'{v:.0f}%', va='center', fontweight='bold', fontsize=10)
+
+    # Formatting
+    for ax in [ax1, ax2]:
+        ax.spines[['top', 'right', 'bottom']].set_visible(False)
+        ax.xaxis.set_visible(False)
+        ax.invert_yaxis() 
+    return fig
+
+# Chart 9: Turn Effectiveness
+def create_spinner_turn_effectiveness_2col(df_in):
+    if df_in.empty:
+        fig, ax = plt.subplots(figsize=(6, 2))
+        ax.text(0.5, 0.5, "No Data", ha='center', va='center')
+        ax.axis('off')
+        return fig
+
+    df_temp = df_in.copy()
+    # Use 'Deviation' column for Turn analysis
+    df_temp["Turn"] = pd.to_numeric(df_temp["Deviation"], errors='coerce')
+    df_temp = df_temp.dropna(subset=["Turn"])
+    
+    # Apply the specific Turn filter (-10 to 10)
+    df_temp = df_temp[(df_temp["Turn"] >= -10) & (df_temp["Turn"] <= 10)]
+
+    if df_temp.empty:
+        fig, ax = plt.subplots(figsize=(6, 2))
+        ax.text(0.5, 0.5, "No Turn Data in Range (-10, 10)", ha='center', va='center')
+        ax.axis('off')
+        return fig
+
+    # 1. Dynamic Binning with size 1
+    # floor/ceil ensures we capture the full integer range present in the filtered data
+    min_t = int(floor(df_temp["Turn"].min()))
+    max_t = int(ceil(df_temp["Turn"].max()))
+    
+    # Create bins with step 1
+    bins = np.arange(min_t, max_t + 1, 1)
+    
+    # Create labels like "-2 to -1", "0 to 1", etc.
+    labels = [f"{bins[i]} to {bins[i+1]}" for i in range(len(bins)-1)]
+    
+    # Group the data into these bins
+    df_temp["TurnGroup"] = pd.cut(df_temp["Turn"], bins=bins, labels=labels, include_lowest=True)
+    
+    # 2. Aggregate Data
+    summary = df_temp.groupby("TurnGroup").agg(
+        Balls=("Runs", "count"),
+        Dots=("Runs", lambda x: (x == 0).sum()),
+        Boundaries=("Runs", lambda x: ((x == 4) | (x == 6)).sum())
+    ).reindex(labels[::-1]).fillna(0) # Reverse to show most positive turn at top
+    
+    # Metrics
+    summary["Bd%"] = (summary["Boundaries"] / summary["Balls"] * 100).fillna(0)
+    summary["Dot%"] = (summary["Dots"] / summary["Balls"] * 100).fillna(0)
+
+    # 3. Plotting
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(5, 3), sharey=True)
+    plt.subplots_adjust(wspace=0.5) 
+    
+    y = np.arange(len(summary.index))
+    height = 0.7
+    color_spin = '#ff5000' # Spinner Blue
+
+    # --- Column 1: Boundary % ---
+    ax1.barh(y, summary["Bd%"], color=color_spin, edgecolor='white', height=height)
+    ax1.set_title("Boundary %", fontsize=12, fontweight='bold')
+    ax1.set_yticks(y)
+    ax1.set_yticklabels(summary.index, fontsize=10)
+    ax1.set_xlim(0, 100)
+    for i, v in enumerate(summary["Bd%"]):
+        if summary["Balls"].iloc[i] > 0:
+            ax1.text(v + 2, i, f'{v:.0f}%', va='center', fontweight='bold', fontsize=9)
+
+    # --- Column 2: Dot % ---
+    ax2.barh(y, summary["Dot%"], color=color_spin, edgecolor='white', height=height)
+    ax2.set_title("Dot %", fontsize=12, fontweight='bold')
+    ax2.set_xlim(0, 100)
+    for i, v in enumerate(summary["Dot%"]):
+        if summary["Balls"].iloc[i] > 0:
+            ax2.text(v + 2, i, f'{v:.0f}%', va='center', fontweight='bold', fontsize=9)
+
+    for ax in [ax1, ax2]:
+        ax.spines[['top', 'right', 'bottom']].set_visible(False)
+        ax.xaxis.set_visible(False)
+        ax.invert_yaxis() 
+
+    return fig
+
+# Chart 10 : Scoring Areas by Batting Strike Rate
+def calculate_scoring_wagon(row):
+    """Calculates the scoring area based on LandingX/Y coordinates and handedness."""
+    LX = row.get("LandingX"); LY = row.get("LandingY"); RH = row.get("IsBatsmanRightHanded")
+    if RH is None or LX is None or LY is None or row.get("Runs", 0) == 0: return None
+    
+    def atan_safe(numerator, denominator): return np.arctan(numerator / denominator) if denominator != 0 else np.nan 
+    
+    # Right Handed Batsman Logic
+    if RH == True: 
+        if LX <= 0 and LY > 0: return "FINE LEG"
+        elif LX <= 0 and LY <= 0: return "THIRD MAN"
+        elif LX > 0 and LY < 0:
+            if atan_safe(LY, LX) < np.pi / -4: return "COVER"
+            elif atan_safe(LX, LY) <= np.pi / -4: return "LONG OFF" 
+        elif LX > 0 and LY >= 0:
+            if atan_safe(LY, LX) >= np.pi / 4: return "SQUARE LEG"
+            elif atan_safe(LY, LX) <= np.pi / 4: return "LONG ON"
+    # Left Handed Batsman Logic
+    elif RH == False: 
+        if LX <= 0 and LY > 0: return "THIRD MAN"
+        elif LX <= 0 and LY <= 0: return "FINE LEG"
+        elif LX > 0 and LY < 0:
+            if atan_safe(LY, LX) < np.pi / -4: return "SQUARE LEG"
+            elif atan_safe(LX, LY) <= np.pi / -4: return "LONG ON"
+        elif LX > 0 and LY >= 0:
+            if atan_safe(LY, LX) >= np.pi / 4: return "COVER"
+            elif atan_safe(LY, LX) <= np.pi / 4: return "LONG OFF"
+    return None
+
+def calculate_scoring_angle(area):
+    """Defines the fixed angle size for each wedge."""
+    if area in ["FINE LEG", "THIRD MAN"]: return 90
+    elif area in ["COVER", "SQUARE LEG", "LONG OFF", "LONG ON"]: return 45
+    return 0
+
+def create_spinner_wagon_wheel(df_in):
+    # Standard size for single wagon wheel
+    FIG_SIZE = (5, 3)
+
+    if df_in.empty:
+        fig, ax = plt.subplots(figsize=FIG_SIZE)
+        ax.text(0.5, 0.5, "No Data for Death Overs (16-20)", ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+
+    # 1. Calculate Scoring Areas
+    df_in["ScoringWagon"] = df_in.apply(calculate_scoring_wagon, axis=1)
+    df_in["FixedAngle"] = df_in["ScoringWagon"].apply(calculate_scoring_angle)
+    
+    # 2. Aggregate Data (Runs and Balls for SR)
+    summary = df_in.groupby("ScoringWagon").agg(
+        TotalRuns=("Runs", "sum"), 
+        TotalBalls=("Runs", "count"),
+        FixedAngle=("FixedAngle", 'first')
+    ).reset_index().dropna(subset=["ScoringWagon"])
+
+    # Handedness Check
+    is_rhb = df_in["IsBatsmanRightHanded"].mode().iloc[0] if not df_in["IsBatsmanRightHanded"].empty else True
+    all_areas = ["FINE LEG", "SQUARE LEG", "LONG ON", "LONG OFF", "COVER", "THIRD MAN"] if is_rhb else \
+                ["THIRD MAN", "COVER", "LONG OFF", "LONG ON", "SQUARE LEG", "FINE LEG"]
+    
+    template = pd.DataFrame({"ScoringWagon": all_areas, "FixedAngle": [calculate_scoring_angle(a) for a in all_areas]})
+    summary = template.merge(summary.drop(columns=["FixedAngle"]), on="ScoringWagon", how="left").fillna(0)
+    summary["SR"] = summary.apply(lambda row: (row["TotalRuns"] / row["TotalBalls"] * 100) if row["TotalBalls"] > 0 else 0, axis=1)
+    summary['RankSR'] = summary['SR'].rank(method='dense', ascending=False)
+
+    # 3. Plotting
+    fig, ax = plt.subplots(figsize=FIG_SIZE)
+    fig.patch.set_facecolor('white')
+    
+    angles = summary["FixedAngle"].tolist()
+    sr_values = summary["SR"].tolist()
+    colors = ['#ff5000' if r == 1 and v > 0 else 'white' for r, v in zip(summary['RankSR'], sr_values)]
+
+    # Pie Chart
+    wedges, _ = ax.pie(angles, colors=colors, wedgeprops={"width": 1, "edgecolor": "black", "linewidth": 0.8}, 
+                       startangle=90, counterclock=False)
+
+    # Labels
+    for i, wedge in enumerate(wedges):
+        sr_val = sr_values[i]
+        if sr_val > 0:
+            angle = (wedge.theta2 + wedge.theta1) / 2.
+            x = 0.65 * np.cos(np.deg2rad(angle))
+            y = 0.65 * np.sin(np.deg2rad(angle))
+            
+            # Contrast for #1 Rank
+            t_color = 'white' if colors[i] == '#d52221' else 'black'
+            ax.text(x, y, f"{sr_val:.0f}", ha='center', va='center', fontsize=8, color=t_color)
+    ax.axis('equal')
+    return fig
+
+# _________________________________________________________________________________________________________________________________________________________________________________________
+# PAGE SETUP LAYOUT
+st.set_page_config(
+    layout="wide"
+)
+st.markdown(
+    """
+    <style>
+    section[data-testid="stSidebar"] {
+        width: 200px !important; 
+    }
+    <style>
+    """,
+    unsafe_allow_html=True,
+)
+
+    
+# 1. CRITICAL: GET DATA AND CHECK FOR AVAILABILITY
+if 'data_df' not in st.session_state:
+    st.error("Please go back to the **Home** page and upload the data first to begin the analysis.")
+    st.stop()
+    
+df_raw = st.session_state['data_df']
+with st.sidebar:
+    st.title("MEN'S")
+    st.write("Red Ball")
+# 1. Define columns with appropriate widths
+col_title_space, col_legend, col_dataname = st.columns([1.5, 2.5, 1.5]) 
+
+with col_title_space:
+    st.title("SPINNERS")
+
+with col_legend:
+    legend_markdown = """
+    <p style='font-size: 16px; margin-top: 30px;'>
+        <span style='color: red; font-size: 20px;'>&#9679;</span> Wickets &nbsp;&nbsp;&nbsp; 
+        <span style='color: royalblue; font-size: 20px;'>&#9679;</span> Boundaries &nbsp;&nbsp;&nbsp; 
+        <span style='color: lightgrey; font-size: 20px;'>&#9679;</span> Others
+    </p>
+    """
+    st.markdown(legend_markdown, unsafe_allow_html=True)
+
+with col_dataname:
+    # Use the variable defined in columns: col_dataname
+    file_name = st.session_state.get('file_name', 'N/A')
+    # Added a div with margin-top to align vertically with the legend
+    st.markdown(f"""
+        <div style='margin-top: 35px; text-align: right;'>
+            <span style='color: grey; font-size: 14px;'>File: </span>
+            <code style='font-size: 14px;'>{file_name}</code>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Ensure columns exist before attempting to convert them
+if "BatsmanName" in df_raw.columns:
+    df_raw["BatsmanName"] = df_raw["BatsmanName"].astype(str).str.upper()
+if "BowlerName" in df_raw.columns:
+    # Assuming 'BowlerName' is used elsewhere, convert it here too for consistency
+    df_raw["BowlerName"] = df_raw["BowlerName"].astype(str).str.upper()
+    
+# 2. BASE FILTER: ONLY spin DELIVERIES
+df_spin_base = df_raw[df_raw["DeliveryType"] == "Spin"]
+
+# --- Prepare Initial Filter Options ---
+if "BowlingTeam" in df_spin_base.columns:
+    team_column = "BowlingTeam"
+else:
+    team_column = "BattingTeam" 
+    st.warning("The 'BowlingTeam' column was not found. Displaying all Batting Teams as a fallback.")
+
+# 3. FILTERS (Bowling Team, Bowler, and Innings)
+filter_col1, filter_col2, filter_col3 = st.columns(3) 
+
+# --- Render Bowling Team Filter (Col 1) ---
+all_teams = ["All"] + sorted(df_spin_base[team_column].dropna().unique().tolist())
+with filter_col1:
+    bowl_team = st.selectbox("Bowling Team", all_teams, index=0)
+
+# --- Determine Bowlers based on selected Team ---
+df_for_bowlers = df_spin_base.copy()
+
+if bowl_team != "All":
+    # Filter the DataFrame used for populating the bowler list
+    df_for_bowlers = df_for_bowlers[df_for_bowlers[team_column] == bowl_team]
+
+if "BowlerName" in df_for_bowlers.columns:
+    # Generate the list of bowlers from the team-filtered DataFrame
+    relative_bowlers = ["All"] + sorted(df_for_bowlers["BowlerName"].dropna().unique().tolist())
+else:
+    relative_bowlers = ["All"]
+    
+# --- Render Bowler Name Filter (Col 2) ---
+with filter_col2:
+    bowler = st.selectbox("Bowler Name", relative_bowlers, index=0)
+
+# --- Render Inningss Filter (Col 3) ---
+Innings_options = ["All"]
+if "Innings" in df_spin_base.columns:
+    valid_Inningss = df_spin_base["Innings"].dropna().astype(int).unique()
+    Innings_options.extend(sorted([str(i) for i in valid_Inningss]))
+with filter_col3:
+    selected_Innings = st.selectbox("Innings", Innings_options, index=0)
+
+st.header(f"{bowler}")
+
+# 4. Apply Filters to the Base spin Data
+df_filtered = df_spin_base.copy()
+
+# Apply Team Filter
+if bowl_team != "All":
+    df_filtered = df_filtered[df_filtered[team_column] == bowl_team]
+    
+# Apply Bowler Filter (This uses the value selected in the relative dropdown)
+if bowler != "All":
+    if "BowlerName" in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered["BowlerName"] == bowler]
+    else:
+        st.warning("BowlerName column not found for filtering.")
+
+# Apply Innings Filter
+if selected_Innings != "All" and "Innings" in df_filtered.columns:
+    Innings_int = int(selected_Innings)
+    df_filtered = df_filtered[df_filtered["Innings"] == Innings_int]
+
+# =========================================================
+# 5. SPLIT AND DISPLAY CHARTS (RHB vs LHB) 🏏
+# =========================================================
+
+# Check for the required column to split the data
+if "IsBatsmanRightHanded" not in df_filtered.columns:
+    st.error("Cannot split data by handedness: 'IsBatsmanRightHanded' column is missing.")
+    st.stop()
+
+# --- Data Split ---
+# True is Right-Handed (RHB), False is Left-Handed (LHB)
+df_rhb = df_filtered[df_filtered["IsBatsmanRightHanded"] == True]
+df_lhb = df_filtered[df_filtered["IsBatsmanRightHanded"] == False]
+
+# --- Display Layout ---
+col_rhb, col_lhb = st.columns(2)
+
+# === LEFT COLUMN: AGAINST RIGHT-HANDED BATSMEN (RHB) ===
+with col_rhb:
+    st.markdown("###  v RIGHT-HAND BAT")    
+    # Chart 1: Crease Beehive
+    st.markdown("###### CREASE BEEHIVE v RHB")
+    st.pyplot(create_Spinner_crease_beehive(df_rhb, "RHB"), use_container_width=True)
+
+    # Chart 2: PITCHMAP
+    pitch_map_col, run_pct_col = st.columns([1, 1]) 
+    with pitch_map_col:
+        st.markdown("###### PITCHMAP v RHB")
+        st.pyplot(create_Spinner_pitch_map(df_rhb), use_container_width=True)    
+    with run_pct_col:
+        st.markdown("##### ")
+        st.pyplot(create_Spinner_pitch_length_bars(df_rhb), use_container_width=True)
+
+
+     # Chart 3/4: RELEASE
+    pace_col, release_col = st.columns([2, 2])
+    with pace_col:
+        st.markdown("###### RELEASE SPEED v RHB")
+        st.pyplot(create_Spinner_release_speed_distribution(df_rhb, "RHB"), use_container_width=True)
+    with release_col:
+        st.markdown("###### RELEASE v RHB")
+        st.pyplot(create_Spinner_release_analysis(df_rhb, "RHB"), use_container_width=True)
+        
+    #Chart 5/6: Swing Deviation Distribution
+    swing_dist, deviation_dist = st.columns([2,2])
+    with swing_dist:
+        st.markdown("###### DRIFT v RHB")
+        st.pyplot(create_swing_distribution_histogram(df_rhb, "RHB"))
+    with deviation_dist:
+        st.markdown("###### TURN v RHB")
+        st.pyplot(create_deviation_distribution_histogram(df_rhb, "RHB")) 
+
+    # Chart 7 Spinner Hitting Missing
+    st.markdown("###### STUMP BEEHIVE v RHB")
+    st.pyplot(create_spinner_hitting_missing(df_rhb,"RHB"),use_container_width = True)
+    
+    # Chart 8: Intereception side -on
+    st.markdown("###### INTERCEPTION SIDE-ON v RHB")
+    st.pyplot(create_spinner_interception_side_on(df_rhb), use_container_width=True)
+
+    # Chart 8: Wagon Wheel SR
+    st.markdown("###### SCORING AREAS BY BATTING STRIKE RATE v RHB")
+    st.pyplot(create_spinner_wagon_wheel(df_rhb),use_container_width = True)
+    
+    # Chart 8: Speed Distribution Overall
+    st.markdown("###### SPEED DISTRIBUTION - OVERALL")
+    st.pyplot(create_spinner_speed_effectiveness_2col(df_filtered), use_container_width=True)
+
+
+# === RIGHT COLUMN: AGAINST LEFT-HANDED BATSMEN (LHB) ===
+with col_lhb:
+    st.markdown("###  v LEFT-HAND BAT")
+
+    # Chart 1: Crease Beehive (using the new local function)
+    st.markdown("###### CREASE BEEHIVE v LHB")
+    st.pyplot(create_Spinner_crease_beehive(df_lhb, "LHB"), use_container_width=True)
+
+    # Chart 2: PITCHMAP
+    pitch_map_col, run_pct_col = st.columns([1, 1]) 
+    with pitch_map_col:
+        st.markdown("###### PITCHMAP v LHB")
+        st.pyplot(create_Spinner_pitch_map(df_lhb), use_container_width=True)    
+    with run_pct_col:
+        st.markdown("##### ")
+        st.pyplot(create_Spinner_pitch_length_bars(df_lhb), use_container_width=True)
+
+    # Chart 3/4: RELEASE
+    pace_col, release_col = st.columns([2, 2]) 
+    with pace_col:
+        st.markdown("###### RELEASE SPEED v LHB")
+        st.pyplot(create_Spinner_release_speed_distribution(df_lhb, "LHB"), use_container_width=True)
+    with release_col:
+        st.markdown("###### RELEASE v LHB")
+        st.pyplot(create_Spinner_release_analysis(df_lhb, "LHB"), use_container_width=True)
+        
+    #Chart 5/6: Swing Deviation Distribution
+    swing_dist, deviation_dist = st.columns([2,2])
+    with swing_dist:
+        st.markdown("###### DRIFT v LHB")
+        st.pyplot(create_swing_distribution_histogram(df_lhb, "LHB"))
+    with deviation_dist:
+        st.markdown("###### TURN v LHB")
+        st.pyplot(create_deviation_distribution_histogram(df_lhb, "LHB"))
+
+    # Chart 7 Spinner Hitting Missing
+    st.markdown("###### STUMP BEEHIVE v LHB")
+    st.pyplot(create_spinner_hitting_missing(df_lhb,"LHB"),use_container_width = True)
+
+    # Chart 8: Intereception side -on
+    st.markdown("###### INTERCEPTION SIDE-ON v LHB")
+    st.pyplot(create_spinner_interception_side_on(df_lhb), use_container_width=True)
+
+    # Chart 9: Wagon Wheel SR
+    st.markdown("###### SCORING AREAS BY BATTING STRIKE RATE v LHB")
+    st.pyplot(create_spinner_wagon_wheel(df_lhb),use_container_width = True)
+
+    # Chart 9: Turn Effectiveness
+    st.markdown("###### TURN DISTRIBUTION - OVERALL")
+    st.pyplot(create_spinner_turn_effectiveness_2col(df_filtered), use_container_width=True)
+  
+        
