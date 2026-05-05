@@ -1049,8 +1049,8 @@ with col_rhb:
     st.pyplot(create_pacer_speed_effectiveness_3col(df_rhb, "RHB"), use_container_width=True)
     
     # Chart 17: Scoring Areas
-        st.markdown("###### SCORING AREAS of RHB ")
-        st.pyplot(create_pacer_death_wagon_wheel(df_rhb), use_container_width=True)
+    st.markdown("###### SCORING AREAS of RHB ")
+    st.pyplot(create_pacer_death_wagon_wheel(df_rhb), use_container_width=True)
 
 # === RIGHT COLUMN: AGAINST LEFT-HANDED BATSMEN (LHB) ===
 with col_lhb:
@@ -1086,5 +1086,5 @@ with col_lhb:
     st.pyplot(create_pacer_speed_effectiveness_3col(df_lhb, "LHB"), use_container_width=True)
     
     # Chart 17: Scoring Areas
-        st.markdown("###### SCORING AREAS of LHB ")
-        st.pyplot(create_pacer_death_wagon_wheel(df_lhb), use_container_width=True)
+    st.markdown("###### SCORING AREAS of LHB ")
+    st.pyplot(create_pacer_death_wagon_wheel(df_lhb), use_container_width=True)
