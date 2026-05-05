@@ -717,10 +717,10 @@ ax_bar.axis('off')
     
 plt.tight_layout(pad=0.2)
     
-    PADDING = 0.008
+PADDING = 0.008
 
-    bh_bbox = ax_scatter.get_position()
-    box_bbox = ax_bar.get_position()
+bh_bbox = ax_scatter.get_position()
+box_bbox = ax_bar.get_position()
     
     x0_orig = min(bh_bbox.x0, box_bbox.x0)
     y0_orig = box_bbox.y0
@@ -733,7 +733,7 @@ plt.tight_layout(pad=0.2)
     width_pad = (x1_orig - x0_orig) + (2 * PADDING)
     height_pad = (y1_orig - y0_orig) + (2 * PADDING)
 
-    border_rect = patches.Rectangle(
+border_rect = patches.Rectangle(
         (x0_pad, y0_pad), 
         width_pad, 
         height_pad, 
@@ -742,7 +742,7 @@ plt.tight_layout(pad=0.2)
         linewidth=0.5, 
         transform=fig.transFigure, 
         clip_on=False
-    )
+)
 
 fig.patches.append(border_rect)
 
