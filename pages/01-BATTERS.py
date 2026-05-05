@@ -1519,9 +1519,9 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown("### v SEAM")
 
-    # Row 1: Zonal Analysis (Beehive Zones)
-    st.markdown("###### CREASE BEEHIVE ZONES v SEAM")
-    st.pyplot(create_zonal_analysis(df_seam, batsman, "Seam"), use_container_width=True)
+    --# Row 1: Zonal Analysis (Beehive Zones)
+    --st.markdown("###### CREASE BEEHIVE ZONES v SEAM")
+    --st.pyplot(create_zonal_analysis(df_seam, batsman, "Seam"), use_container_width=True)
     
     # Row 2: Crease Beehive Scatter
     st.markdown("###### CREASE BEEHIVE v SEAM")
