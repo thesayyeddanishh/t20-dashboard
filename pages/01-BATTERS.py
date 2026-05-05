@@ -432,19 +432,19 @@ def create_pitch_Length_bars(df_in, delivery_type):
     # Adjust space between charts to minimize it vertically
     plt.subplots_adjust(hspace=10) 
 
-    metrics = ["StrikeRate", "Average","Bpct"]
-    titles = ["Batting Strike Rate", "Batting Average", "Boundry %"]
+    metrics = ["StrikeRate", "Average","Runs"]
+    titles = ["Batting Strike Rate", "Batting Average", "Runs"]
     colors = ['#ff5000', '#ff5000', '#ff5000']
                                 
     # Define limits for each chart to ensure proper scaling
     max_sr = df_summary["StrikeRate"].max() * 1.1 if df_summary["StrikeRate"].max() > 0 else 300
     max_avg = df_summary["Average"].max() * 1.1 if df_summary["Average"].max() > 0 else 100
-    max_Bpct = df_summary["Bpct"].max() * 1.1 if df_summary["Bpct"].max() > 0 else 100
+    max_runs = df_summary["Runs"].max() * 1.1 if df_summary["Runs"].max() > 0 else 100
 
     xlim_limits = {
         "Average": (0, max_avg),
         "StrikeRate": (0, max_sr),
-        "Bpct": (0, max_Bpct)
+        "Runs": (0, max_runs)
     }
 
     # --- Plotting Loop ---
