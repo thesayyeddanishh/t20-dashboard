@@ -777,8 +777,52 @@ def create_pacer_speed_effectiveness_3col(df_in, handedness_label):
         ax.invert_yaxis() 
 
     return fig
+    
+### Chart: SCORING AREAS
 
-def create_pacer_wagon_wheel(df_in):
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. DEFINE THE UTILITY FUNCTIONS FIRST
+def calculate_scoring_wagon(row):
+    """Calculates the scoring area based on LandingX/Y coordinates."""
+    LX = row.get("LandingX")
+    LY = row.get("LandingY")
+    RH = row.get("IsBatsmanRightHanded")
+    if RH is None or LX is None or LY is None or row.get("Runs", 0) == 0: 
+        return None
+    
+    def atan_safe(numerator, denominator): 
+        return np.arctan(numerator / denominator) if denominator != 0 else np.nan 
+    
+    if RH == True: 
+        if LX <= 0 and LY > 0: return "FINE LEG"
+        elif LX <= 0 and LY <= 0: return "THIRD MAN"
+        elif LX > 0 and LY < 0:
+            if atan_safe(LY, LX) < np.pi / -4: return "COVER"
+            elif atan_safe(LX, LY) <= np.pi / -4: return "LONG OFF" 
+        elif LX > 0 and LY >= 0:
+            if atan_safe(LY, LX) >= np.pi / 4: return "SQUARE LEG"
+            elif atan_safe(LY, LX) <= np.pi / 4: return "LONG ON"
+    elif RH == False: 
+        if LX <= 0 and LY > 0: return "THIRD MAN"
+        elif LX <= 0 and LY <= 0: return "FINE LEG"
+        elif LX > 0 and LY < 0:
+            if atan_safe(LY, LX) < np.pi / -4: return "SQUARE LEG"
+            elif atan_safe(LX, LY) <= np.pi / -4: return "LONG ON"
+        elif LX > 0 and LY >= 0:
+            if atan_safe(LY, LX) >= np.pi / 4: return "COVER"
+            elif atan_safe(LY, LX) <= np.pi / 4: return "LONG OFF"
+    return None
+
+def calculate_scoring_angle(area):
+    if area in ["FINE LEG", "THIRD MAN"]: return 90
+    elif area in ["COVER", "SQUARE LEG", "LONG OFF", "LONG ON"]: return 45
+    return 0
+
+# 2. NOW DEFINE THE MAIN CHART FUNCTION
+def create_pacer_death_wagon_wheel(df_in):
     # Standard size for single wagon wheel
     FIG_SIZE = (5, 3)
 
