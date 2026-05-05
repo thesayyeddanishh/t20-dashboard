@@ -243,7 +243,7 @@ def create_Spinner_pitch_length_bars(df_in):
 # ========================================================
 def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function and parameter
     if df_in.empty:
-        fig, ax = plt.subplots(figsize=(7, 6)); 
+        fig, ax = plt.subplots(figsize=(7, 5)); 
         ax.text(0.5, 0.5, f"No data for Analysis ({handedness_label})", ha='center', va='center', fontsize=12); 
         ax.axis('off'); 
         return fig
@@ -298,7 +298,7 @@ def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function a
 
     # -----------------------------------------------------------
     # --- 1. SETUP SUBPLOTS ---
-    fig = plt.figure(figsize=(7, 6)) 
+    fig = plt.figure(figsize=(7, 5)) 
     gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.005) 
     ax_bh = fig.add_subplot(gs[0, 0])      
     ax_boxes = fig.add_subplot(gs[1, 0])   
