@@ -210,12 +210,12 @@ def create_pacer_pitch_length_bars(df_in):
             
             ax.text(val, j, label, 
                     ha='left', va='center', 
-                    fontsize=10, fontweight='bold', color='black',
-                    bbox=dict(facecolor='White', alpha=0.8, edgecolor='none', pad=2),
+                    fontsize=15, fontweight='bold', color='black',
+                    bbox=dict(facecolor='White', alpha=0.8, edgecolor='none', pad=5),
                     zorder=4)
 
         # --- Formatting ---
-        ax.set_title(title, fontsize=12, fontweight='bold', pad=0.5, loc='left')
+        ax.set_title(title, fontsize=12, fontweight='bold', pad=2, loc='left')
         ax.set_facecolor('white')
         ax.tick_params(axis='x', labelsize=12)
         ax.tick_params(axis='y', length=0) 
