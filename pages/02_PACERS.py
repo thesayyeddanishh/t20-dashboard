@@ -822,7 +822,7 @@ def calculate_scoring_angle(area):
     return 0
 
 # 2. NOW DEFINE THE MAIN CHART FUNCTION
-def create_pacer_death_wagon_wheel(df_in):
+def create_pacer_wagon_wheel(df_in):
     # Standard size for single wagon wheel
     FIG_SIZE = (5, 3)
 
