@@ -11,7 +11,7 @@ REQUIRED_COLS = [
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="Cricket Dashboard",
+    page_title="VR Story Finder",
     layout="wide"
 )
 
@@ -29,8 +29,7 @@ st.markdown(
 )
 # --- Sidebar Content ---
 with st.sidebar:
-    st.title("MEN'S")
-    st.write("Red Ball")
+    st.write("For Men's T20s only")
 
 # --- Helper Function for Upload Logic ---
 def process_upload(uploaded_file):
@@ -72,7 +71,7 @@ def process_upload(uploaded_file):
 # --- Main App Logic (Single Uploader for Load and Replace) ---
 # =========================================================
 
-st.title("🏏DANshboard")
+st.title("VR Story Finder")
 
 # Use a single file uploader component
 uploaded_file = st.file_uploader(
