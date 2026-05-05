@@ -777,17 +777,6 @@ def create_wagon_wheel(df_in, delivery_type):
         ax.axis('off')
         return fig
 
-    # --- SETUP GRID FOR TWO ROWS ---
-    # Top: Wagon Wheel (Larger) | Bottom: Left/Right Split (Smaller)
-    fig = plt.figure(figsize=FIG_SIZE)
-    # Ratio: 75% for Wagon Wheel, 25% for Left/Right Split
-    gs = fig.add_gridspec(2, 1, height_ratios=[1, 1], hspace=0.1) 
-    
-    ax_wagon = fig.add_subplot(gs[0, 0])
-    ax_split = fig.add_subplot(gs[1, 0])
-    
-    fig.patch.set_facecolor('white')
-
     # ----------------------------------------------------------------------
     ## --- PART 1: CHART 6 - SCORING WAGON WHEEL (ax_wagon) ---
     # ----------------------------------------------------------------------
