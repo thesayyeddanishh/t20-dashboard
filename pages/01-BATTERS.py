@@ -843,13 +843,6 @@ def create_wagon_wheel(df_in, delivery_type):
         ax_wagon.set_title("RUNS DISTRIBUTION (%)", fontsize=20, fontweight='bold', pad=20)
         ax_wagon.axis('equal')
 
-        # 5. Plot Part 2: Strike Rate (ax_sr)
-        y_pos = np.arange(len(all_areas))
-        ax_sr.barh(y_pos, wagon_summary["SR"], color='#ff5000', edgecolor='black', height=0.6)
-        ax_sr.set_yticks(y_pos); ax_sr.set_yticklabels(all_areas, fontsize=14, fontweight='bold')
-        ax_sr.invert_yaxis()
-        ax_sr.spines[['top', 'right', 'bottom']].set_visible(False); ax_sr.xaxis.set_visible(False)
-
     except Exception as e:
         # If ax_wagon is already defined, we can use it to show the error
         ax_wagon.text(0.5, 0.5, f"Error: {e}", ha='center', va='center')
