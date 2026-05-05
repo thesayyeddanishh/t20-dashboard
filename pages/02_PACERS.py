@@ -1013,43 +1013,14 @@ if "IsBatsmanRightHanded" not in df_filtered.columns:
 df_rhb = df_filtered[df_filtered["IsBatsmanRightHanded"] == True]
 df_lhb = df_filtered[df_filtered["IsBatsmanRightHanded"] == False]
 
-# =========================================================
-# --- POWERPLAY ANALYSIS (Overs 1-6) ---
-# =========================================================
-# Filter for Powerplay Overs
-df_pp = df_filtered[df_filtered["Over"] <= 6]
-if df_pp.empty:
-    st.warning("No Powerplay data available for the selected filters.")
-else:
-    # Split Powerplay data by handedness
-    df_pp_rhb = df_pp[df_pp["IsBatsmanRightHanded"] == True]
-    df_pp_lhb = df_pp[df_pp["IsBatsmanRightHanded"] == False]
-
-# =========================================================
-# --- Death Overs (Overs 7-15) ---
-# =========================================================
-# Filter for Death Overs
-df_do = df_filtered[(df_filtered["Over"] <= 20) & (df_filtered["Over"] > 15) ]
-if df_do.empty:
-    st.warning("No Powerplay data available for the selected filters.")
-else:
-    # Split Powerplay data by handedness
-    df_do_rhb = df_do[df_do["IsBatsmanRightHanded"] == True]
-    df_do_lhb = df_do[df_do["IsBatsmanRightHanded"] == False]
 
 # --- Display Layout ---
 col_rhb, col_lhb = st.columns(2)
 
 # === LEFT COLUMN: AGAINST RIGHT-HANDED BATSMEN (RHB) ===
 with col_rhb:
-    st.markdown("###  v RIGHT-HAND BAT")    
-    # Chart 1a: Crease Beehive (using the new local function)
-    st.markdown("###### CREASE BEEHIVE v RHB")
-    st.pyplot(create_pacer_crease_beehive(df_rhb, "RHB"), use_container_width=True)
+    st.markdown("###  v RIGHT-HAND BAT")
 
-    # Chart 1b: Lateral Performance Boxes (Bowling Avg)
-    # st.pyplot(create_pacer_lateral_performance_boxes(df_rhb, "RHB"), use_container_width=True)
-    
     # Chart 3: PITCHMAP
     pitch_map_col, run_pct_col = st.columns([1, 1]) 
     with pitch_map_col:
@@ -1058,6 +1029,14 @@ with col_rhb:
     with run_pct_col:
         st.markdown("##### ")
         st.pyplot(create_pacer_pitch_length_bars(df_rhb), use_container_width=True)
+        
+    # Chart 1a: Crease Beehive (using the new local function)
+    st.markdown("###### CREASE BEEHIVE v RHB")
+    st.pyplot(create_pacer_crease_beehive(df_rhb, "RHB"), use_container_width=True)
+
+    # Chart 1b: Lateral Performance Boxes (Bowling Avg)
+    # st.pyplot(create_pacer_lateral_performance_boxes(df_rhb, "RHB"), use_container_width=True)
+    
 
      # Chart 4/5: RELEASE
     pace_col, release_col = st.columns([2, 2])
@@ -1078,14 +1057,6 @@ with col_rhb:
 with col_lhb:
     st.markdown("###  v LEFT-HAND BAT")
 
-    # Chart 1a: Crease Beehive (using the new local function)
-    st.markdown("###### CREASE BEEHIVE v LHB")
-    st.pyplot(create_pacer_crease_beehive(df_lhb, "LHB"), use_container_width=True)
-
-    # Chart 1b: Lateral Performance Boxes (Bowling Avg)
-    # st.pyplot(create_pacer_lateral_performance_boxes(df_lhb, "LHB"), use_container_width=True)
-
-
     # Chart 3: PITCHMAP
     pitch_map_col, run_pct_col = st.columns([1, 1]) 
     with pitch_map_col:
@@ -1094,6 +1065,13 @@ with col_lhb:
     with run_pct_col:
         st.markdown("##### ")
         st.pyplot(create_pacer_pitch_length_bars(df_lhb), use_container_width=True)
+        
+    # Chart 1a: Crease Beehive (using the new local function)
+    st.markdown("###### CREASE BEEHIVE v LHB")
+    st.pyplot(create_pacer_crease_beehive(df_lhb, "LHB"), use_container_width=True)
+
+    # Chart 1b: Lateral Performance Boxes (Bowling Avg)
+    # st.pyplot(create_pacer_lateral_performance_boxes(df_lhb, "LHB"), use_container_width=True)
 
     # Chart 4/5: RELEASE
     pace_col, release_col = st.columns([2, 2]) 
