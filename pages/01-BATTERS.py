@@ -876,32 +876,39 @@ def create_wagon_wheel(df_in, delivery_type):
         ax.axis('off')
 
     return fig        
-        # === CRITICAL FIX: CENTERING PERCENTAGE LABELS AND STYLING ===
-    for i, autotext in enumerate(autotexts):
-        if i >= len(run_percentages): break
-        percent = run_percentages[i]
-    
-            # 1. Set the actual percentage text
-        if percent > 0:
+
+    # === CRITICAL FIX: CENTERING PERCENTAGE LABELS AND STYLING ===
+    # --- Inside the autotext loop ---
+        for i, autotext in enumerate(autotexts):
+            if i >= len(run_percentages): 
+                break
+            
+            percent = run_percentages[i]
+            
+            if percent > 0:
+                # 1. Set text and alignment
                 autotext.set_text(f'{percent:.0f}%')
-                
-                # 💥 FIX: Ensure percentage text is centered in the slice (horizontally and vertically)
                 autotext.set_horizontalalignment('center')
                 autotext.set_verticalalignment('center')
                 
-                # Add a white stroke (outline) for text visibility
-        else:
-            autotext.set_text('')
+                # 2. Set styling (Font size and weight)
+                autotext.set_fontsize(26)
+                autotext.set_fontweight('bold')
                 
-            # 2. Set text color based on background color for contrast
-            color_rgb = mcolors.to_rgb(colors[i])
-            luminosity = 0.2126 * color_rgb[0] + 0.7152 * color_rgb[1] + 0.0722 * color_rgb[2]
-            
-            autotext.set_color('white' if luminosity < 0.5 and colors[i] == COLOR_HIGH else 'black') 
-            autotext.set_fontsize(26)
-            autotext.set_fontweight('bold')
+                # 3. Dynamic contrast: Determine if text should be white or black
+                color_rgb = mcolors.to_rgb(colors[i])
+                luminosity = 0.2126 * color_rgb[0] + 0.7152 * color_rgb[1] + 0.0722 * color_rgb[2]
+                
+                # If background is dark (luminosity < 0.5), use white text
+                if luminosity < 0.5:
+                    autotext.set_color('white')
+                else:
+                    autotext.set_color('black')
+            else:
+                # Hide text for 0% slices
+                autotext.set_text('')
         
-        ax_wagon.axis('equal'); 
+        ax_wagon.axis('equal') 
 
 # Chart 12: Speed Effectiveness
 def create_speed_metrics_bar(df_in, delivery_type):
