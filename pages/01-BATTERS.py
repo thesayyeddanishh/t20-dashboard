@@ -142,7 +142,7 @@ def create_crease_beehive(df_in, delivery_type):
         else:
             color = cmap(norm(sr))
             sr_display = f"{sr:.0f}"
-            avg_display = f"{avg:.1f}"
+            avg_display = f"{avg:0f}"
             
             # Contrast logic for text
             r, g, b, a = color
@@ -159,7 +159,7 @@ def create_crease_beehive(df_in, delivery_type):
     
         # --- UPDATED TEXT: Multi-line Format ---
         # Line 1: Runs and Outs
-        label_top = f"{runs} Runs, {outs} Outs"
+        label_top = f"{runs} R, {outs} W"
         # Line 2: Avg and SR
         label_bottom = f"{avg_display} Avg, {sr_display} SR"
         
