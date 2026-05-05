@@ -419,10 +419,9 @@ def create_pitch_Length_bars(df_in, delivery_type):
     lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else 0, axis=1
     )
 
-    # Boundary Percentage
-    df_summary["Bpct"] = df_summary.apply(
-    lambda row: (row["Boundaries"] / row["Balls"]) * 100 if row["Balls"] > 0 else 0, axis=1
-    )
+    # Boundary % with just the Total Runs value
+    df_summary["TotalRuns"] = df_summary["Runs"]
+    
     # Categories for plotting (reversed for barh)
     categories = df_summary.index.tolist()[::-1]
     
