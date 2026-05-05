@@ -832,7 +832,7 @@ def create_wagon_wheel(df_in, delivery_type):
         for i, autotext in enumerate(autotexts):
             if wagon_summary["RunPercentage"].iloc[i] > 0:
                 autotext.set_text(f'{wagon_summary["RunPercentage"].iloc[i]:.0f}%')
-                autotext.set_fontsize(26); autotext.set_fontweight('bold')
+                autotext.set_fontsize(15); autotext.set_fontweight('bold')
                 rgb = mcolors.to_rgb(colors[i])
                 lum = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
                 autotext.set_color('white' if lum < 0.5 else 'black')
