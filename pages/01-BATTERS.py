@@ -719,7 +719,7 @@ ax_bar.axis('off')
     ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
     # ----------------------------------------------------------------------
     
-    plt.tight_layout(pad=0.2) 
+plt.tight_layout(pad=0.2) 
     
     PADDING = 0.005 
 
