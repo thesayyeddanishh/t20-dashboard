@@ -719,8 +719,8 @@ def create_interception_side_on(df_in, delivery_type):
     
     PADDING = 0.008
 
-    bh_bbox = ax_bh.get_position()
-    box_bbox = ax_boxes.get_position()
+    bh_bbox = ax_scatter.get_position()
+    box_bbox = ax_bar.get_position()
     
     x0_orig = min(bh_bbox.x0, box_bbox.x0)
     y0_orig = box_bbox.y0
@@ -747,9 +747,6 @@ def create_interception_side_on(df_in, delivery_type):
     fig.patches.append(border_rect)
 
     return fig
-
-
-    
 
 # --- Helper Functions for Chart 6 ---
 def calculate_scoring_wagon(row):
