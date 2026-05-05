@@ -903,8 +903,7 @@ def create_wagon_wheel(df_in, delivery_type):
         
         ax_wagon.axis('equal'); 
 
-
-# Updated Chart 12: Speed Effectiveness with Dynamic Brackets
+# Chart 12: Speed Effectiveness
 def create_speed_metrics_bar(df_in, delivery_type):
     if df_in.empty:
         fig, ax = plt.subplots(figsize=(5, 3))
@@ -912,7 +911,7 @@ def create_speed_metrics_bar(df_in, delivery_type):
         ax.axis('off')
         return fig
 
-    # 1. Define Dynamic Speed Groups based on Delivery Type
+    # 1. Define Dynamic Speed Groups
     def assign_speed_group(speed):
         if delivery_type == "Seam":
             if speed < 125: return "<125"
