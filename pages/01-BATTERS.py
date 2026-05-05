@@ -613,11 +613,11 @@ def create_interception_side_on(df_in, delivery_type):
     ax_scatter.spines['left'].set_visible(False)
     ax_scatter.spines['bottom'].set_visible(False)
 
-    # ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
     ## --- PART 2: CHART 4b - CREASE WIDTH SPLIT BARS (ax_bar) ---
     # ----------------------------------------------------------------------
     
-    # --- 1. Data Preparation ---
+    # 1. Data Preparation
     INTERCEPTION_BINS = get_interception_bins()
     ordered_keys = ["0m-1m", "1m-2m", "2m-3m", "3m+"]  # Order: Close to Wide
     COLORMAP = 'Wistia'
@@ -629,124 +629,127 @@ def create_interception_side_on(df_in, delivery_type):
 
     df_crease = df_in.copy()
     df_crease["CreaseWidth"] = (df_crease["InterceptionX"] + 10).apply(assign_crease_width)
-
+    
     df_summary = df_crease.groupby("CreaseWidth").agg(
-    Runs=("Runs", "sum"), 
-    Wickets=("Wicket", lambda x: (x == True).sum()), 
-    Balls=("Wicket", "count")
+        Runs=("Runs", "sum"), 
+        Wickets=("Wicket", lambda x: (x == True).sum()), 
+        Balls=("Wicket", "count")
     ).reset_index().set_index("CreaseWidth").reindex(ordered_keys).fillna(0)
-
-# Calculate Strike Rate (SR) and Average (Avg)
+    
+    # NEW: Calculate Strike Rate (SR) instead of Average
     df_summary["SR"] = df_summary.apply(
-    lambda row: (row["Runs"] / row["Balls"]) * 100 if row["Balls"] > 0 else 0, axis=1
+        lambda row: (row["Runs"] / row["Balls"]) * 100 if row["Balls"] > 0 else np.nan, axis=1
     )
-
-# Calculate Average (Avg)
-    df_summary["Avg"] = df_summary.apply(
-    lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else row["Runs"], axis=1
-    )
-
-# --- 2. Plotting Equal Boxes ---
+    
+    # 2. Plotting Equal Boxes
     num_boxes = len(ordered_keys)
     box_width = 1.0 / num_boxes 
     left = 0.0
-    box_height = 0.6 # Original height
 
+    # Normalization changed to Strike Rate
     max_sr_val = df_summary["SR"].replace([np.inf, -np.inf], np.nan).max()
-    max_sr = max_sr_val if max_sr_val > 0 else 200 
-
+    max_sr = max_sr_val if max_sr_val > 0 else 200 # Default max for scaling
+    
     norm = mcolors.Normalize(vmin=0, vmax=max_sr)
     cmap = cm.get_cmap(COLORMAP)
-
-    for index, row in df_summary.iterrows():
-        runs = int(row["Runs"])
-        wickets = int(row["Wickets"])
-        sr = row["SR"]
-        avg = row["Avg"]
     
-        if sr == 0 or np.isnan(sr):
+    for index, row in df_summary.iterrows():
+        wickets = row["Wickets"]
+        sr = row["SR"] 
+        
+        # --- CONDITIONAL STYLING LOGIC ---
+        if np.isnan(sr) or sr == np.inf:
             sr_display = '0'
-            avg_display = '0.0'
             color = 'white'
             text_color = 'black'
         else:
             sr_display = f"{sr:.0f}"
-            avg_display = f"{avg:.0f}" # Use .1f so Avg isn't just a rounded whole number
             color = cmap(norm(sr)) 
-        
+            
             # Contrast logic for text
             r, g, b, a = color
             luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
             text_color = 'white' if luminosity < 0.5 else 'black'
+            
+        # Draw the box  
+        ax_bar.barh(
+            y=0.5,             
+            width=box_width,
+            height=0.6,          
+            left=left,         
+            color=color,
+            edgecolor='black',
+            linewidth=0.4
+        )
         
-    # Draw the box  
-    ax_bar.barh(
-        y=0.5,             
-        width=box_width,
-        height=box_height,          
-        left=left,         
-        color=color,
-        edgecolor='black',
-        linewidth=0.4
-    )
-    
-    # --- FIXED VARIABLE NAMES HERE ---
-    label_top = f"{runs} R, {wickets}W" 
-    label_bottom = f"{avg_display} Avg, {sr_display} SR"
-    
-    center_x = left + box_width / 2
-    
-    # Position Line 1 (Upper half)
-    ax_bar.text(center_x, 0.62, label_top, ha='center', va='center', 
-                fontsize=8, fontweight='bold', color=text_color)
-    
-    # Position Line 2 (Lower half)
-    ax_bar.text(center_x, 0.38, label_bottom, ha='center', va='center', 
-                fontsize=8, fontweight='bold', color=text_color)
-    
-    # Crease Width Label (Top of the box)
-    ax_bar.text(center_x, 0.82, index, ha='center', va='bottom', fontsize=9, color='black')
+        # --- UPDATED TEXT: Wickets and Strike Rate ---
+        label_text = f"{int(wickets)}W - SR {sr_display}"
+        
+        center_x = left + box_width / 2
+        center_y = 0.5
+        
+        ax_bar.text(
+            center_x, center_y, 
+            label_text,
+            ha='center', va='center', 
+            fontsize=9, 
+            fontweight = 'bold',
+            color=text_color
+        )
+        
+        # Crease Width Label (Top of the box)
+        ax_bar.text(center_x, 0.8, index, ha='center', va='bottom', fontsize=9, color='black')
 
-    left += box_width
-ax_bar.set_xlim(0, 1)
-ax_bar.set_ylim(0, 1) 
-ax_bar.axis('off')
+        left += box_width
 
-# -----------------------------------------------------------
-    ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
-    
-plt.tight_layout(pad=0.2)
-    
-PADDING = 0.008
+    # 3. Styling for Bar Chart
+    ax_bar.set_xlim(0, 1)
+    ax_bar.set_ylim(0, 1) 
+    ax_bar.axis('off')
 
-bh_bbox = ax_scatter.get_position()
-box_bbox = ax_bar.get_position()
-    
-x0_orig = min(bh_bbox.x0, box_bbox.x0)
-y0_orig = box_bbox.y0
-x1_orig = max(bh_bbox.x1, box_bbox.x1)
-y1_orig = bh_bbox.y1
-    
-x0_pad = x0_orig - PADDING
-y0_pad = y0_orig - PADDING
-    
-width_pad = (x1_orig - x0_orig) + (2 * PADDING)
-height_pad = (y1_orig - y0_orig) + (2 * PADDING)
 
-border_rect = patches.Rectangle(
-        (x0_pad, y0_pad), 
-        width_pad, 
-        height_pad, 
+    # ----------------------------------------------------------------------
+    ## --- PART 3: DRAW SINGLE COMPACT BORDER ---
+    # ----------------------------------------------------------------------
+    
+    plt.tight_layout(pad=0.2) 
+    
+    PADDING = 0.005 
+
+    # Get the bounding box of the top (scatter) and bottom (bar) charts
+    scatter_bbox = ax_scatter.get_position()
+    bar_bbox = ax_bar.get_position() 
+    # Determine the total bounds (figure coordinates)
+    x0_orig = scatter_bbox.x0         
+    y0_orig = bar_bbox.y0  
+    x1_orig = scatter_bbox.x1     
+    y1_orig = scatter_bbox.y1         
+    
+    # Apply Padding
+    x0_pad = x0_orig - PADDING
+    y0_pad = y0_orig - PADDING
+    
+    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
+    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
+
+    # Draw the custom Rectangle 
+    border_rect = patches.Rectangle(
+        (x0_pad-0.008, y0_pad+0.02), 
+        width_pad+0.017, 
+        height_pad,  
         facecolor='none', 
         edgecolor='black', 
         linewidth=0.5, 
         transform=fig.transFigure, 
         clip_on=False
-)
+    )
 
-fig.patches.append(border_rect)
+    fig.patches.append(border_rect)
 
-return fig
+    return fig
+
+
+
 
 # --- Helper Functions for Chart 6 ---
 def calculate_scoring_wagon(row):
