@@ -618,61 +618,61 @@ def create_interception_side_on(df_in, delivery_type):
     # ----------------------------------------------------------------------
     
     # --- 1. Data Preparation ---
-INTERCEPTION_BINS = get_interception_bins()
-ordered_keys = ["0m-1m", "1m-2m", "2m-3m", "3m+"]  # Order: Close to Wide
-COLORMAP = 'Wistia'
+    INTERCEPTION_BINS = get_interception_bins()
+    ordered_keys = ["0m-1m", "1m-2m", "2m-3m", "3m+"]  # Order: Close to Wide
+    COLORMAP = 'Wistia'
+    
+    def assign_crease_width(x):
+        for width, bounds in INTERCEPTION_BINS.items():
+            if bounds[0] <= x < bounds[1]: return width
+        return None
 
-def assign_crease_width(x):
-    for width, bounds in INTERCEPTION_BINS.items():
-        if bounds[0] <= x < bounds[1]: return width
-    return None
+    df_crease = df_in.copy()
+    df_crease["CreaseWidth"] = (df_crease["InterceptionX"] + 10).apply(assign_crease_width)
 
-df_crease = df_in.copy()
-df_crease["CreaseWidth"] = (df_crease["InterceptionX"] + 10).apply(assign_crease_width)
-
-df_summary = df_crease.groupby("CreaseWidth").agg(
+    df_summary = df_crease.groupby("CreaseWidth").agg(
     Runs=("Runs", "sum"), 
     Wickets=("Wicket", lambda x: (x == True).sum()), 
     Balls=("Wicket", "count")
-).reset_index().set_index("CreaseWidth").reindex(ordered_keys).fillna(0)
+    ).reset_index().set_index("CreaseWidth").reindex(ordered_keys).fillna(0)
 
 # Calculate Strike Rate (SR) and Average (Avg)
-df_summary["SR"] = df_summary.apply(
+    df_summary["SR"] = df_summary.apply(
     lambda row: (row["Runs"] / row["Balls"]) * 100 if row["Balls"] > 0 else 0, axis=1
-)
+    )
 
 # Calculate Average (Avg)
-df_summary["Avg"] = df_summary.apply(
+    df_summary["Avg"] = df_summary.apply(
     lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else row["Runs"], axis=1
-)
+    )
 
 # --- 2. Plotting Equal Boxes ---
-num_boxes = len(ordered_keys)
-box_width = 1.0 / num_boxes 
-left = 0.0
-box_height = 0.6 # Original height
+    num_boxes = len(ordered_keys)
+    box_width = 1.0 / num_boxes 
+    left = 0.0
+    box_height = 0.6 # Original height
 
-max_sr_val = df_summary["SR"].replace([np.inf, -np.inf], np.nan).max()
-max_sr = max_sr_val if max_sr_val > 0 else 200 
+    max_sr_val = df_summary["SR"].replace([np.inf, -np.inf], np.nan).max()
+    max_sr = max_sr_val if max_sr_val > 0 else 200 
 
-norm = mcolors.Normalize(vmin=0, vmax=max_sr)
-cmap = cm.get_cmap(COLORMAP)
+    norm = mcolors.Normalize(vmin=0, vmax=max_sr)
+    cmap = cm.get_cmap(COLORMAP)
 
-for index, row in df_summary.iterrows():
-    runs = int(row["Runs"])
-    wickets = int(row["Wickets"])
-    sr = row["SR"]
-    avg = row["Avg"]
+    for index, row in df_summary.iterrows():
+        runs = int(row["Runs"])
+        wickets = int(row["Wickets"])
+        sr = row["SR"]
+        avg = row["Avg"]
     
-    if sr == 0 or np.isnan(sr):
-        sr_display = '0'
-        avg_display = '0.0'
-        color = 'white'
-        text_color = 'black'
-    else:
-        sr_display = f"{sr:.0f}"
-        avg_display = f"{avg:.1f}" # Use .1f so Avg isn't just a rounded whole number
-        color = cmap(norm(sr)) 
+        if sr == 0 or np.isnan(sr):
+            sr_display = '0'
+            avg_display = '0.0'
+            color = 'white'
+            text_color = 'black'
+        else:
+            sr_display = f"{sr:.0f}"
+            avg_display = f"{avg:.1f}" # Use .1f so Avg isn't just a rounded whole number
+            color = cmap(norm(sr)) 
         
         # Contrast logic for text
         r, g, b, a = color
