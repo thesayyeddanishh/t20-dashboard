@@ -1149,17 +1149,13 @@ with col1:
         st.pyplot(create_pitch_Length_bars(df_seam, "Seam"), use_container_width=True)   
 
     # Row 5: Interception Side-On (Wide View)
-    # Row 5: Interception Side-On (Wide View)
     st.markdown("###### INTERCEPTION SIDE-VIEW v SEAM")
     st.pyplot(create_interception_side_on(df_seam, "Seam"), use_container_width=True)
 
     # Row 7: Interception and Scoring Areas (Side-by-Side)
-        st.markdown("###### SCORING AREAS v SEAM ")    
-        # Two charts stacked vertically in the right column
-        st.pyplot(create_wagon_wheel(df_seam, "Seam"), use_container_width=True)
+    st.markdown("###### SCORING AREAS v SEAM ")
+    st.pyplot(create_wagon_wheel(df_seam, "Seam"), use_container_width=True)
     
-   
-   
     # --- Row 9 & 10 RELEASE SPEED ANALYSIS---
     st.markdown("###### METRICS BY RELEASE SPEED v SEAM")
     st.pyplot(create_speed_metrics_bar(df_death_seam, "Seam"), use_container_width=True)
@@ -1190,7 +1186,7 @@ with col2:
 
     # Row 7: Scoring Areas (Side-by-Side)
     st.markdown("###### SCORING AREAS v SPIN")
-        st.pyplot(create_wagon_wheel(df_spin,'SPIN'), use_container_width=True)
+    st.pyplot(create_wagon_wheel(df_spin,'SPIN'), use_container_width=True)
     
 
     # --- Row 11 & 12 RELEASE SPEED ANALYSIS---
