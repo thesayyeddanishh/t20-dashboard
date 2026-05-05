@@ -636,15 +636,20 @@ def create_interception_side_on(df_in, delivery_type):
         Balls=("Wicket", "count")
     ).reset_index().set_index("CreaseWidth").reindex(ordered_keys).fillna(0)
     
-    # NEW: Calculate Strike Rate (SR) instead of Average
+    # NEW: Calculate Strike Rate (SR)
     df_summary["SR"] = df_summary.apply(
         lambda row: (row["Runs"] / row["Balls"]) * 100 if row["Balls"] > 0 else np.nan, axis=1
+    )
+    # Calculate Average (Avg)
+    df_summary["Avg"] = df_summary.apply(
+        lambda row: row["Runs"] / row["Wickets"] if row["Wickets"] > 0 else row["Runs"], axis=1
     )
     
     # 2. Plotting Equal Boxes
     num_boxes = len(ordered_keys)
     box_width = 1.0 / num_boxes 
     left = 0.0
+    box_height = 0.8
 
     # Normalization changed to Strike Rate
     max_sr_val = df_summary["SR"].replace([np.inf, -np.inf], np.nan).max()
@@ -654,16 +659,20 @@ def create_interception_side_on(df_in, delivery_type):
     cmap = cm.get_cmap(COLORMAP)
     
     for index, row in df_summary.iterrows():
-        wickets = row["Wickets"]
-        sr = row["SR"] 
+        runs = int(row["Runs"])
+        wickets = int(row["Wickets"])
+        sr = row["SR"]
+        avg = row["Avg"]
         
         # --- CONDITIONAL STYLING LOGIC ---
-        if np.isnan(sr) or sr == np.inf:
+        if sr == 0:
             sr_display = '0'
+            avg_display = '0.0'
             color = 'white'
             text_color = 'black'
         else:
             sr_display = f"{sr:.0f}"
+            avg_display = f"{avg:.1f}"
             color = cmap(norm(sr)) 
             
             # Contrast logic for text
@@ -682,23 +691,24 @@ def create_interception_side_on(df_in, delivery_type):
             linewidth=0.4
         )
         
-        # --- UPDATED TEXT: Wickets and Strike Rate ---
-        label_text = f"{int(wickets)}W - SR {sr_display}"
-        
+        # --- UPDATED TEXT: Multi-line Format ---
+        # Line 1: Runs and Wickets
+        label_top = f"{runs} Runs, {wickets}W"
+        # Line 2: Avg and SR
+        label_bottom = f"{avg_display} Avg, {sr_display} SR"
+    
         center_x = left + box_width / 2
-        center_y = 0.5
-        
-        ax_bar.text(
-            center_x, center_y, 
-            label_text,
-            ha='center', va='center', 
-            fontsize=9, 
-            fontweight = 'bold',
-            color=text_color
-        )
-        
+    
+        # Position Line 1 (Upper half of the colored box)
+        ax_bar.text(center_x, 0.62, label_top, ha='center', va='center', 
+                fontsize=8, fontweight='bold', color=text_color)
+    
+        # Position Line 2 (Lower half of the colored box)
+        ax_bar.text(center_x, 0.38, label_bottom, ha='center', va='center', 
+                fontsize=8, fontweight='bold', color=text_color)
+    
         # Crease Width Label (Top of the box)
-        ax_bar.text(center_x, 0.8, index, ha='center', va='bottom', fontsize=9, color='black')
+        ax_bar.text(center_x, 0.82, index, ha='center', va='bottom', fontsize=9, color='black')
 
         left += box_width
 
