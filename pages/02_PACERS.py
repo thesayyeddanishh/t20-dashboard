@@ -634,13 +634,13 @@ def create_pacer_release_analysis(df_in, handedness_label):
     # Non-Wickets (light grey)
     ax_map.scatter(
         release_non_wickets["ReleaseY"], release_non_wickets["ReleaseZ"], 
-        s=20, color='#D3D3D3', alpha=1.0, linewidths=0.5, label="No Wicket"
+        s=30, color='#D3D3D3', alpha=1.0, linewidths=0.5, label="No Wicket"
     )
 
     # Wickets (red)
     ax_map.scatter(
         release_wickets["ReleaseY"], release_wickets["ReleaseZ"], 
-        s=40, color='red', alpha=0.5, linewidths=1.0, label="Wicket", zorder=5
+        s=30, color='red', alpha=1.0, linewidths=1.0, label="Wicket", zorder=5
     )
     
     # Add Stump Lines
