@@ -759,7 +759,7 @@ border_rect = patches.Rectangle(
         zorder=0 # Ensure it stays behind any data points if they overlap
     )
 
-    fig.patches.append(border_rect)
+fig.patches.append(border_rect)
     return fig
     
 
