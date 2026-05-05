@@ -715,7 +715,7 @@ ax_bar.axis('off')
 # -----------------------------------------------------------
     ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
     
-    plt.tight_layout(pad=0.2)
+plt.tight_layout(pad=0.2)
     
     PADDING = 0.008
 
@@ -744,9 +744,9 @@ ax_bar.axis('off')
         clip_on=False
     )
 
-    fig.patches.append(border_rect)
+fig.patches.append(border_rect)
 
-    return fig
+return fig
 
 # --- Helper Functions for Chart 6 ---
 def calculate_scoring_wagon(row):
