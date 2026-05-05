@@ -712,6 +712,43 @@ def create_interception_side_on(df_in, delivery_type):
     ax_bar.set_ylim(0, 1) 
     ax_bar.axis('off')
 
+# -----------------------------------------------------------
+    ## --- 4. DRAW SINGLE COMPACT BORDER AROUND THE ENTIRE FIGURE ---
+    
+    plt.tight_layout(pad=0.2)
+    
+    PADDING = 0.008
+
+    bh_bbox = ax_bh.get_position()
+    box_bbox = ax_boxes.get_position()
+    
+    x0_orig = min(bh_bbox.x0, box_bbox.x0)
+    y0_orig = box_bbox.y0
+    x1_orig = max(bh_bbox.x1, box_bbox.x1)
+    y1_orig = bh_bbox.y1
+    
+    x0_pad = x0_orig - PADDING
+    y0_pad = y0_orig - PADDING
+    
+    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
+    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
+
+    border_rect = patches.Rectangle(
+        (x0_pad, y0_pad), 
+        width_pad, 
+        height_pad, 
+        facecolor='none', 
+        edgecolor='black', 
+        linewidth=0.5, 
+        transform=fig.transFigure, 
+        clip_on=False
+    )
+
+    fig.patches.append(border_rect)
+
+    return fig
+
+
     
 
 # --- Helper Functions for Chart 6 ---
