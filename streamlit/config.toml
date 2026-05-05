@@ -13,4 +13,4 @@ secondaryBackgroundColor="#FF5000"
 
 [ui]
 # Set the desired width of the sidebar (150px)
-sidebarWidth="150px"
+sidebarWidth="100px"
