@@ -491,13 +491,13 @@ def create_Spinner_release_analysis(df_in, handedness_label):
     # Non-Wickets (light grey)
     ax_map.scatter(
         release_non_wickets["ReleaseY"], release_non_wickets["ReleaseZ"], 
-        s=10, color='#D3D3D3', alpha=1.0, edgecolors='white', linewidths=0.5, label="No Wicket"
+        s=20, color='#D3D3D3', alpha=1.0, linewidths=0.5, label="No Wicket"
     )
 
     # Wickets (red)
     ax_map.scatter(
         release_wickets["ReleaseY"], release_wickets["ReleaseZ"], 
-        s=10, color='red', alpha=1.0, edgecolors='white', linewidths=1.0, label="Wicket", zorder=5
+        s=20, color='red', alpha=1.0, linewidths=1.0, label="Wicket", zorder=5
     )
     
     # Add Stump Lines
@@ -571,7 +571,7 @@ def create_Spinner_release_analysis(df_in, handedness_label):
 
 def create_spinner_hitting_missing(df_in, handedness_label):
 
-    FIG_SIZE = (10, 5.5)
+    FIG_SIZE = (10, 7)
 
     # Early exit if empty
     if df_in.empty:
