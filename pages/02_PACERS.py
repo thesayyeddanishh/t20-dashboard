@@ -425,7 +425,7 @@ def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and
 
 # --- CHART 4: RELEASE SPEED DISTRIBUTION ---
 def create_pacer_release_speed_distribution(df_in, handedness_label):
-    FIG_SIZE = (3, 4.4)
+    FIG_SIZE = (5, 4)
 
     if df_in.empty or "ReleaseSpeed" not in df_in.columns or df_in["ReleaseSpeed"].empty:
         fig, ax = plt.subplots(figsize=FIG_SIZE)
