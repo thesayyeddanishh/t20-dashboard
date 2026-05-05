@@ -243,7 +243,7 @@ def create_Spinner_pitch_length_bars(df_in):
 # ========================================================
 def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function and parameter
     if df_in.empty:
-        fig, ax = plt.subplots(figsize=(7, 5)); 
+        fig, ax = plt.subplots(figsize=(7, 6)); 
         ax.text(0.5, 0.5, f"No data for Analysis ({handedness_label})", ha='center', va='center', fontsize=12); 
         ax.axis('off'); 
         return fig
@@ -298,7 +298,7 @@ def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function a
 
     # -----------------------------------------------------------
     # --- 1. SETUP SUBPLOTS ---
-    fig = plt.figure(figsize=(7, 5)) 
+    fig = plt.figure(figsize=(7, 6)) 
     gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.005) 
     ax_bh = fig.add_subplot(gs[0, 0])      
     ax_boxes = fig.add_subplot(gs[1, 0])   
@@ -314,8 +314,8 @@ def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function a
     ax_bh.axvline(x=-0.18, color="grey", linestyle="--", linewidth=0.5) 
     ax_bh.axvline(x=0.18, color="grey", linestyle="--", linewidth=0.5)
     ax_bh.axvline(x=0, color="grey", linestyle="--", linewidth=0.5) 
-    ax_bh.axvline(x=-0.92, color="grey", linestyle="-", linewidth=0.5) 
-    ax_bh.axvline(x=0.92, color="grey", linestyle="-", linewidth=0.5)
+    ax_bh.axvline(x=-0.92, color="red", linestyle="-", linewidth=0.25) 
+    ax_bh.axvline(x=0.92, color="red", linestyle="-", linewidth=0.25)
     ax_bh.axhline(y=0.78, color="grey", linestyle="-", linewidth=0.5)
 
     # --- Annotation ---
@@ -354,7 +354,7 @@ def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function a
         # Draw the Rectangle
         ax_boxes.add_patch(
             patches.Rectangle((left, 0), box_width, box_height, 
-                              edgecolor="black", facecolor=color, linewidth=0.4)
+                              edgecolor="white", facecolor=color, linewidth=0.5)
         )
         
         # Label 1: Zone Name
@@ -491,13 +491,13 @@ def create_Spinner_release_analysis(df_in, handedness_label):
     # Non-Wickets (light grey)
     ax_map.scatter(
         release_non_wickets["ReleaseY"], release_non_wickets["ReleaseZ"], 
-        s=20, color='#D3D3D3', alpha=1.0, linewidths=0.5, label="No Wicket"
+        s=15, color='#D3D3D3', alpha=1.0, linewidths=0, label="No Wicket"
     )
 
     # Wickets (red)
     ax_map.scatter(
         release_wickets["ReleaseY"], release_wickets["ReleaseZ"], 
-        s=20, color='red', alpha=1.0, linewidths=1.0, label="Wicket", zorder=5
+        s=15, color='red', alpha=1.0, linewidths=0, label="Wicket", zorder=5
     )
     
     # Add Stump Lines
@@ -571,7 +571,7 @@ def create_Spinner_release_analysis(df_in, handedness_label):
 
 def create_spinner_hitting_missing(df_in, handedness_label):
 
-    FIG_SIZE = (10, 7)
+    FIG_SIZE = (10, 10)
 
     # Early exit if empty
     if df_in.empty:
