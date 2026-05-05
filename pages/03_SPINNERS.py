@@ -17,6 +17,16 @@ from math import floor, ceil
 # =========================================================
 # --- CHART 2: PITCH MAP (BOUNCE LOCATION) ---
 # =========================================================
+# --- HELPERS ---
+def get_spinner_pitch_bins():
+    """Defines the length categories for spin bowling."""
+    return {
+         "OP": [-2, 2.8],
+        "Full": [2.8, 4.4],
+        "Good": [4.4, 6.2],
+        "Short": [6.2, 15.0]
+    }
+
 
 def create_Spinner_pitch_map(df_in): 
     PITCH_BINS = {
