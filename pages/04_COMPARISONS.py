@@ -9,17 +9,20 @@ st.set_page_config(layout="wide")
 st.markdown(
     """
     <style>
-        /* Global Header Typography Changes - Safe Layout */
+        /* Global Header Typography - Safe Layout to prevent clipping */
         h1 {
             font-weight: 800 !important;
             color: #1E293B !important;
             letter-spacing: -0.5px;
-            margin: 0px !important;
-            padding: 0px !important;
+            margin-top: 0px !important;
+            padding-top: 0px !important;
+            margin-bottom: 5px !important;
         }
         h2, h3 {
             font-weight: 700 !important;
             color: #334155 !important;
+            margin-top: 0px !important;
+            padding-top: 0px !important;
         }
         
         /* Table Styling Overrides */
@@ -40,7 +43,7 @@ st.markdown(
             text-align: center !important;
         }
         
-        /* Control Panel Sidebar Simulation Container */
+        /* Control Panel Sidebar Container */
         div.filter-box {
             background-color: #F8FAFC;
             border: 1px solid #E2E8F0;
@@ -49,10 +52,20 @@ st.markdown(
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-top: 0px; 
         }
+        
+        /* Subtitle formatting for active filters */
+        .filter-caption {
+            color: #64748B;
+            font-size: 0.9rem;
+            margin-top: -10px !important;
+            margin-bottom: 20px !important;
+        }
     </style>
     """,
     unsafe_allow_html=True
-)# Header Section
+)
+
+# Header Section
 st.title("Player Performance Comparison")
 st.write("---")
 
@@ -88,8 +101,14 @@ else:
     # ==================================================================
     with filter_panel_col:
         # Wrap everything in a nice styled container box
-        st.markdown('<div class="filter-box">', unsafe_allow_html=True)
-        st.subheader("Config Panel")
+        # Replacing st.subheader with raw markdown keeps the blank spacer box from appearing
+        st.markdown(
+            """
+            <div class="filter-box">
+                <h3>Config Panel</h3>
+            """, 
+            unsafe_allow_html=True
+        )
         
         # Filter 1: Player Role Selection
         f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
@@ -255,7 +274,7 @@ else:
                     leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
                     
                     st.subheader(f"Top 10 Batters by Strike Rate vs {filter_label}")
-                    st.write("")
+                    st.markdown(f'<div class="filter-caption">Applied Filters: Phase: <b>{f_overs}</b> | Minimum Requirement: <b>{min_balls} Balls Faced</b></div>', unsafe_allow_html=True)
                     
                     column_configuration = {
                         "Batter": st.column_config.TextColumn(width=200),
@@ -318,7 +337,7 @@ else:
                         leaderboard.columns = col_titles
 
                         st.subheader(f"Top 10 Pacers' Performance vs {filter_label} ({f2})")
-                        st.write("")
+                        st.markdown(f'<div class="filter-caption">Applied Filters: Phase: <b>{f_overs}</b> | Minimum Requirement: <b>{min_balls} Balls Bowled</b></div>', unsafe_allow_html=True)
 
                         column_configuration = {
                             "Bowler": st.column_config.TextColumn(width=200),
@@ -373,7 +392,7 @@ else:
                         leaderboard.columns = col_titles
 
                         st.subheader(f"Top 10 Spinners Performance vs {filter_label} ({f2})")
-                        st.write("")
+                        st.markdown(f'<div class="filter-caption">Applied Filters: Phase: <b>{f_overs}</b> | Minimum Requirement: <b>{min_balls} Balls Bowled</b></div>', unsafe_allow_html=True)
 
                         column_configuration = {
                             "Bowler": st.column_config.TextColumn(width=200),
