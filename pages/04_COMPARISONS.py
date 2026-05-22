@@ -108,10 +108,10 @@ else:
                 # Setting alignment to center dynamically enforces headers to align too.
                 # Setting width (in pixels) forces the table to shrink away from the full layout width.
                 column_configuration = {
-                    "Batter": st.column_config.TextColumn(width=180),
-                    "Runs": st.column_config.NumberColumn(alignment="center", width=100),
-                    "Balls faced": st.column_config.NumberColumn(alignment="center", width=110),
-                    "Dismissals": st.column_config.NumberColumn(alignment="center", width=110),
+                    "Batter": st.column_config.TextColumn(width=200),
+                    "Runs": st.column_config.NumberColumn(alignment="center", width=80),
+                    "Balls faced": st.column_config.NumberColumn(alignment="center", width=80),
+                    "Dismissals": st.column_config.NumberColumn(alignment="center", width=80),
                     "Strike Rate": st.column_config.NumberColumn(alignment="center", width=120),
                 }
                 
