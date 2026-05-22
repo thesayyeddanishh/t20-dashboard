@@ -146,7 +146,7 @@ else:
         with col2:
             f2 = st.selectbox(
                 "View Type", 
-                ["Economy By Length", "% by Lengths", "% Economy by Pace"]
+                ["Economy By Length", "% by Lengths", "Economy by Pace", "% Balls by Pace"]
             )
         
         with col3:
@@ -170,7 +170,7 @@ else:
                 elif f3 == "BOUNCER":
                     df_filtered = df_role_base[df_role_base["BounceX"] >= 10.0]
                     
-            elif f2 == "% Economy by Pace":
+            elif f2 in ["Economy by Pace", "% Balls by Pace"]:
                 f3 = st.selectbox("Select Pace Range", ["Above 140", "Below 125"])
                 filter_label = f"Pace ({f3} kph)"
                 
@@ -202,6 +202,7 @@ else:
                     leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
                     leaderboard["Economy"] = leaderboard["Economy"].round(2)
 
+                    # Manage display formatting states depending on requested view context mappings
                     if f2 == "% by Lengths":
                         leaderboard["% of Length"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
                         leaderboard["% of Length"] = leaderboard["% of Length"].round(1)
@@ -210,6 +211,16 @@ else:
                         final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% of Length"]
                         col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Length"]
                         pct_col_name = "% of Length"
+                        
+                    elif f2 == "% Balls by Pace":
+                        leaderboard["% of Pace Context"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
+                        leaderboard["% of Pace Context"] = leaderboard["% of Pace Context"].round(1)
+                        leaderboard = leaderboard.sort_values(by="% of Pace Context", ascending=False).head(10)
+                        
+                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% of Pace Context"]
+                        col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Pace"]
+                        pct_col_name = "% of Pace"
+                        
                     else:
                         leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
                         
@@ -220,7 +231,7 @@ else:
                     leaderboard = leaderboard[final_cols]
                     leaderboard.columns = col_titles
 
-                    st.subheader(f"📊 Top 10 Pacers Performance vs {filter_label} ({f2})")
+                    st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2})")
 
                     column_configuration = {
                         "Bowler": st.column_config.TextColumn(width=200),
