@@ -183,22 +183,22 @@ else:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
         # --- PACERS COMPUTATION ENGINE ---
-        if "Bowler Name" in df_raw.columns:
+        if "BowlerName" in df_raw.columns:
             # Calculate overall total balls per bowler first (crucial for % by lengths scaling metric)
-            df_bowler_totals = df_raw.groupby("Bowler Name").agg(
+            df_bowler_totals = df_raw.groupby("BowlerName").agg(
                 Total_Balls=("Runs", "count")
             ).reset_index()
 
             if not df_filtered.empty:
                 # Group data within our active context filter subset slice
-                leaderboard = df_filtered.groupby("Bowler Name").agg(
+                leaderboard = df_filtered.groupby("BowlerName").agg(
                     Runs_Conceded=("Runs", "sum"),
                     Balls_Bowled=("Runs", "count"),
                     Wickets=("Wicket", lambda x: sorted(x).count(True))
                 ).reset_index()
 
                 # Safely blend the totals back together 
-                leaderboard = leaderboard.merge(df_bowler_totals, on="Bowler Name", how="left")
+                leaderboard = leaderboard.merge(df_bowler_totals, on="BowlerName", how="left")
 
                 # Enforce user threshold filtering boundary rules
                 leaderboard = leaderboard[leaderboard["Balls_Bowled"] >= min_balls]
@@ -216,14 +216,14 @@ else:
                         # High percentage mapping takes precedence
                         leaderboard = leaderboard.sort_values(by="% of Length", ascending=False).head(10)
                         
-                        final_cols = ["Bowler Name", "Balls_Bowled", "Wickets", "Economy", "% of Length"]
+                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% of Length"]
                         col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Length"]
                         pct_col_name = "% of Length"
                     else:
                         # Standard economy display ranks lower runs conceded values to the top
                         leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
                         
-                        final_cols = ["Bowler Name", "Balls_Bowled", "Wickets", "Economy"]
+                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy"]
                         col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
                         pct_col_name = None
 
@@ -252,7 +252,7 @@ else:
             else:
                 st.info("No delivery records found matching this filter combo in your data.")
         else:
-            st.error("⚠️ Column tracking identifier 'Bowler Name' missing in uploaded sheet format structure.")
+            st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
 
     # ==================================================================
     # BRANCH 3: SPINNERS PLACEHOLDER
