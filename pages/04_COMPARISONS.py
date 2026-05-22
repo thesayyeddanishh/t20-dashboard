@@ -279,7 +279,7 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2})")
+                        st.subheader(f"Top 10 Pacers' Performance vs {filter_label} ({f2})")
                         st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
 
                         column_configuration = {
@@ -334,7 +334,7 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2})")
+                        st.subheader(f"Top 10 Spinners Performance vs {filter_label}")
                         st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
 
                         column_configuration = {
