@@ -119,7 +119,7 @@ else:
         # Filter 1: Player Role Selection
         f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
         
-        # Shared Filter 2: Match Phase Filter (Overs)
+        # Shared Filter 2: Match Phase Filter (Overs) - Defaults to "All"
         f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
 
         # Apply global Match Phase Filtering to df_raw
@@ -136,13 +136,16 @@ else:
             f2 = st.selectbox("SR by Length / Pace", ["LENGTH", "PACE"])
             
             if f2 == "LENGTH":
+                # "All" added as the default option
                 f3 = st.selectbox(
                     "Select Length", 
-                    ["FULL TOSS", "YORKER", "THE SLOT", "LENGTH", "SHORT", "BOUNCER"]
+                    ["All", "FULL TOSS", "YORKER", "THE SLOT", "LENGTH", "SHORT", "BOUNCER"]
                 )
                 filter_label = f3
                 
-                if f3 == "FULL TOSS":
+                if f3 == "All":
+                    df_filtered = df_raw.copy()
+                elif f3 == "FULL TOSS":
                     df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "YORKER":
                     df_filtered = df_raw[df_raw["BounceX"] < 2.5]
@@ -169,12 +172,16 @@ else:
         elif f1 == "PACERS":
             df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "seam"] if "DeliveryType" in df_raw.columns else df_raw.copy()
             
+            # "All" added as the top default option
             f2 = st.selectbox(
                 "View Type", 
-                ["Economy By Length", "% by Lengths", "Economy by Pace", "% Balls by Pace"]
+                ["All", "Economy By Length", "% by Lengths", "Economy by Pace", "% Balls by Pace"]
             )
             
-            if f2 in ["Economy By Length", "% by Lengths"]:
+            if f2 == "All":
+                df_filtered = df_role_base.copy()
+                filter_label = "All Lengths"
+            elif f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
                     "Select Length", 
                     ["FULL TOSS", "YORKER", "THE SLOT", "LENGTH", "SHORT", "BOUNCER"]
@@ -208,12 +215,16 @@ else:
         elif f1 == "SPINNERS":
             df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "spin"] if "DeliveryType" in df_raw.columns else df_raw.copy()
             
+            # "All" added as the top default option
             f2 = st.selectbox(
                 "View Type", 
-                ["Economy By Length", "% by Lengths", "% /Turn (TURN)"]
+                ["All", "Economy By Length", "% by Lengths", "% /Turn (TURN)"]
             )
             
-            if f2 in ["Economy By Length", "% by Lengths"]:
+            if f2 == "All":
+                df_filtered = df_role_base.copy()
+                filter_label = "All Lengths"
+            elif f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
                     "Select Length", 
                     ["OVERPITCHED", "FULL", "GOOD", "SHORT"]
@@ -309,7 +320,13 @@ else:
                         leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
                         leaderboard["Economy"] = leaderboard["Economy"].round(2)
 
-                        if f2 == "% by Lengths":
+                        # Sorting Logic: Default View "All" sorts by Wickets descending
+                        if f2 == "All":
+                            leaderboard = leaderboard.sort_values(by="Wickets", ascending=False).head(10)
+                            final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy"]
+                            col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
+                            pct_col_name = None
+                        elif f2 == "% by Lengths":
                             leaderboard["% of Length"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
                             leaderboard["% of Length"] = leaderboard["% of Length"].round(1)
                             leaderboard = leaderboard.sort_values(by="% of Length", ascending=False).head(10)
@@ -332,7 +349,8 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"Top 10 Pacers' Performance vs {filter_label} ({f2})")
+                        title_suffix = "by Wickets" if f2 == "All" else f"vs {filter_label} ({f2})"
+                        st.subheader(f"Top 10 Pacers' Performance {title_suffix}")
                         st.markdown(f'<div class="filter-caption">Applied Filters: Phase: <b>{f_overs}</b> | Minimum Requirement: <b>{min_balls} Balls Bowled</b></div>', unsafe_allow_html=True)
 
                         column_configuration = {
@@ -371,7 +389,13 @@ else:
                         leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
                         leaderboard["Economy"] = leaderboard["Economy"].round(2)
 
-                        if f2 in ["% by Lengths", "% /Turn (TURN)"]:
+                        # Sorting Logic: Default View "All" sorts by Wickets descending
+                        if f2 == "All":
+                            leaderboard = leaderboard.sort_values(by="Wickets", ascending=False).head(10)
+                            final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy"]
+                            col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
+                            pct_col_name = None
+                        elif f2 in ["% by Lengths", "% /Turn (TURN)"]:
                             leaderboard["% Metric"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
                             leaderboard["% Metric"] = leaderboard["% Metric"].round(1)
                             leaderboard = leaderboard.sort_values(by="% Metric", ascending=False).head(10)
@@ -387,7 +411,8 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"Top 10 Spinners Performance vs {filter_label} ({f2})")
+                        title_suffix = "by Wickets" if f2 == "All" else f"vs {filter_label} ({f2})"
+                        st.subheader(f"Top 10 Spinners Performance {title_suffix}")
                         st.markdown(f'<div class="filter-caption">Applied Filters: Phase: <b>{f_overs}</b> | Minimum Requirement: <b>{min_balls} Balls Bowled</b></div>', unsafe_allow_html=True)
 
                         column_configuration = {
