@@ -9,15 +9,22 @@ st.set_page_config(layout="wide")
 st.markdown(
     """
     <style>
-        /* Global Header Typography Changes */
+        /* Global Header Typography & Tight Padding Changes */
         h1 {
             font-weight: 800 !important;
             color: #1E293B !important;
             letter-spacing: -0.5px;
+            margin-top: -50px !important; /* Strips top container padding */
+            margin-bottom: 10px !important;
         }
         h2, h3 {
             font-weight: 700 !important;
             color: #334155 !important;
+        }
+        
+        /* Clear extra top gaps in the main block */
+        .block-container {
+            padding-top: 2rem !important;
         }
         
         /* Table Styling Overrides */
@@ -45,19 +52,7 @@ st.markdown(
             border-radius: 12px;
             padding: 24px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        
-        /* Metric Card Micro-Styling */
-        div[data-testid="stMetricValue"] {
-            font-size: 1.8rem !important;
-            font-weight: 700 !important;
-            color: #0F172A !important;
-        }
-        div[data-testid="stMetricLabel"] {
-            font-size: 0.85rem !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
-            color: #64748B !important;
+            margin-top: 15px;
         }
     </style>
     """,
@@ -65,13 +60,12 @@ st.markdown(
 )
 
 # Header Section
-st.title("🏆 Player Performance Comparison")
-st.markdown("Instantly rank athletes based on deep custom situational criteria and data thresholds.")
+st.title("Player Performance Comparison")
 st.write("---")
 
 # --- 1. SESSION STATE DATA CHECK ---
 if 'data_df' not in st.session_state or st.session_state['data_df'] is None:
-    st.error("🚨 **No Data Found!** Please navigate back to the **HOME** page and upload your CSV tracking asset first.")
+    st.error("No Data Found! Please navigate back to the HOME page and upload your CSV tracking asset first.")
 else:
     # Safely extract and copy the dataframe
     df_raw = st.session_state['data_df'].copy()
@@ -102,8 +96,7 @@ else:
     with filter_panel_col:
         # Wrap everything in a nice styled container box
         st.markdown('<div class="filter-box">', unsafe_allow_html=True)
-        st.subheader("⚙️ Config Panel")
-        st.markdown("Modify calculation rules below:")
+        st.subheader("Config Panel")
         
         # Filter 1: Player Role Selection
         f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
@@ -268,14 +261,7 @@ else:
                     
                     leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
                     
-                    # Visual Upgrades: Header Context & Info Sub-bar
-                    st.subheader(f"📊 Top 10 Batters by Strike Rate vs {filter_label}")
-                    
-                    # Highlight Metrics summary dashboard blocks before table
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Matching Balls Faced", int(df_filtered.shape[0]))
-                    m2.metric("Total Runs Sliced", int(df_filtered["Runs"].sum()))
-                    m3.metric("Unique Batters Active", int(leaderboard.shape[0]))
+                    st.subheader(f"Top 10 Batters by Strike Rate vs {filter_label}")
                     st.write("")
                     
                     column_configuration = {
@@ -292,9 +278,9 @@ else:
                         column_config=column_configuration
                     )
                 else:
-                    st.info(f"📋 No batters found matching the minimum requirement threshold of {min_balls} balls faced.")
+                    st.info(f"No batters found matching the minimum requirement threshold of {min_balls} balls faced.")
             else:
-                st.info("ℹ️ No delivery metrics recorded in the raw data matching this custom query scenario.")
+                st.info("No delivery metrics recorded in the raw data matching this custom query scenario.")
 
         # --- RENDER ENGINE: PACERS ---
         elif f1 == "PACERS":
@@ -338,13 +324,7 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2})")
-                        
-                        # Top line KPI Block metrics
-                        m1, m2, m3 = st.columns(3)
-                        m1.metric("Matching Balls Bowled", int(df_filtered.shape[0]))
-                        m2.metric("Total Wickets Taken", int(df_filtered["Wicket"].sum()))
-                        m3.metric("Unique Pacers Active", int(leaderboard.shape[0]))
+                        st.subheader(f"Top 10 Pacers' Performance vs {filter_label} ({f2})")
                         st.write("")
 
                         column_configuration = {
@@ -358,11 +338,11 @@ else:
 
                         st.dataframe(leaderboard.set_index("Bowler"), use_container_width=True, column_config=column_configuration)
                     else:
-                        st.info(f"📋 No pacers found matching the minimum requirement threshold of {min_balls} balls bowled.")
+                        st.info(f"No pacers found matching the minimum requirement threshold of {min_balls} balls bowled.")
                 else:
-                    st.info("ℹ️ No delivery metrics recorded in the raw data matching this custom query scenario.")
+                    st.info("No delivery metrics recorded in the raw data matching this custom query scenario.")
             else:
-                st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
+                st.error("Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
 
         # --- RENDER ENGINE: SPINNERS ---
         elif f1 == "SPINNERS":
@@ -399,13 +379,7 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2})")
-                        
-                        # Top line KPI Block metrics
-                        m1, m2, m3 = st.columns(3)
-                        m1.metric("Matching Balls Bowled", int(df_filtered.shape[0]))
-                        m2.metric("Total Wickets Taken", int(df_filtered["Wicket"].sum()))
-                        m3.metric("Unique Spinners Active", int(leaderboard.shape[0]))
+                        st.subheader(f"Top 10 Spinners Performance vs {filter_label} ({f2})")
                         st.write("")
 
                         column_configuration = {
@@ -419,8 +393,8 @@ else:
 
                         st.dataframe(leaderboard.set_index("Bowler"), use_container_width=True, column_config=column_configuration)
                     else:
-                        st.info(f"📋 No spinners found matching the minimum requirement threshold of {min_balls} balls bowled.")
+                        st.info(f"No spinners found matching the minimum requirement threshold of {min_balls} balls bowled.")
                 else:
-                    st.info("ℹ️ No delivery metrics recorded in the raw data matching this custom query scenario.")
+                    st.info("No delivery metrics recorded in the raw data matching this custom query scenario.")
             else:
-                st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
+                st.error("Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
