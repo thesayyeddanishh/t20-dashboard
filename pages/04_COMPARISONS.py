@@ -127,7 +127,7 @@ else:
                 # --- EXPLICIT COLUMN & HEADER CONFIGURATION ---
                 column_configuration = {
                     "Batter": st.column_config.TextColumn(width=200),
-                    "Runs": st.column_config.NumberColumn(alignment="center", width=75),
+                    "Runs": st.column_config.NumberColumn(alignment="center", width=50),
                     "Balls faced": st.column_config.NumberColumn(alignment="center", width=75),
                     "Dismissals": st.column_config.NumberColumn(alignment="center", width=75),
                     "Strike Rate": st.column_config.NumberColumn(alignment="center", width=100),
