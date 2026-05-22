@@ -5,6 +5,26 @@ import numpy as np
 # Set page configuration to match your wide layout preference
 st.set_page_config(layout="wide")
 
+# --- CUSTOM CSS TO FORCE HEADER CENTERING ---
+st.markdown(
+    """
+    <style>
+        /* Force both standard and containerized table headers to align center */
+        th[data-testid="stTableHeadCell"] {
+            text-align: center !important;
+        }
+        th {
+            text-align: center !important;
+        }
+        div[data-testid="stTableHeadCellContent"] {
+            justify-content: center !important;
+            text-align: center !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("🏆 Player Performance Comparison")
 st.markdown("Instantly rank players based on custom situational criteria and thresholds.")
 
@@ -105,8 +125,6 @@ else:
                 st.subheader(f"Top 10 Batters by Strike Rate  vs {filter_label} (Min {min_balls} Balls)")
                 
                 # --- EXPLICIT COLUMN & HEADER CONFIGURATION ---
-                # Setting alignment to center dynamically enforces headers to align too.
-                # Setting width (in pixels) forces the table to shrink away from the full layout width.
                 column_configuration = {
                     "Batter": st.column_config.TextColumn(width=200),
                     "Runs": st.column_config.NumberColumn(alignment="center", width=75),
@@ -115,15 +133,12 @@ else:
                     "Strike Rate": st.column_config.NumberColumn(alignment="center", width=100),
                 }
                 
-                # Render using an isolated layout container grid
-                layout_left, layout_right = st.columns([1, 1])
-                
-                with layout_left:
-                    st.dataframe(
-                        leaderboard.set_index("Batter"), 
-                        use_container_width=False, # Disable stretching behavior
-                        column_config=column_configuration
-                    )
+                # Render the dataframe cleanly at its true pixel dimensions without stretching
+                st.dataframe(
+                    leaderboard.set_index("Batter"), 
+                    use_container_width=False, 
+                    column_config=column_configuration
+                )
             else:
                 st.info(f"No batters met the threshold rules of facing at least {min_balls} balls in this selection.")
         else:
