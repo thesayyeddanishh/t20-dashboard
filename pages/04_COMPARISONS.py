@@ -160,7 +160,7 @@ else:
             
             f2 = st.selectbox(
                 "View Type", 
-                ["Economy By Length", "% by Lengths", "% /Turn (TURN)"]
+                ["Economy By Length", "% by Lengths", "Turn Direction"]
             )
             
             if f2 in ["Economy By Length", "% by Lengths"]:
@@ -179,7 +179,7 @@ else:
                 elif f3 == "SHORT":
                     df_filtered = df_role_base[df_role_base["BounceX"] > 6.2]
                     
-            elif f2 == "% /Turn (TURN)":
+            elif f2 == "Turn Direction":
                 f3 = st.selectbox("Select Ball Turn Direction", ["Turn Left", "No Turn", "Turn Right"])
                 filter_label = f3
                 
@@ -219,7 +219,7 @@ else:
                     
                     leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
                     
-                    st.subheader(f"📊 Top 10 Batters by Strike Rate vs {filter_label}")
+                    st.subheader(f"Top 10 Batters by Strike Rate vs {filter_label}")
                     st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Faced")
                     
                     column_configuration = {
@@ -321,7 +321,7 @@ else:
                         leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
                         leaderboard["Economy"] = leaderboard["Economy"].round(2)
 
-                        if f2 in ["% by Lengths", "% /Turn (TURN)"]:
+                        if f2 in ["% by Lengths", "Turn Direction"]:
                             leaderboard["% Metric"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
                             leaderboard["% Metric"] = leaderboard["% Metric"].round(1)
                             leaderboard = leaderboard.sort_values(by="% Metric", ascending=False).head(10)
@@ -337,7 +337,7 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2})")
+                        st.subheader(f"Top 10 Spinners Performance vs {filter_label}")
                         st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
 
                         column_configuration = {
