@@ -11,8 +11,9 @@ REQUIRED_COLS = [
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="VR Story Finder",
-    layout="wide"
+    layout="wide", 
+    page_title="VR Story Assistant",
+    page_icon="hei.png"
 )
 
 # --- Custom CSS for Sidebar Width (200px) ---
