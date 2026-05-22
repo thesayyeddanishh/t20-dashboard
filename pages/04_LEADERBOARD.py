@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Set page configuration to match your wide layout preference
-st.set_page_config(layout="wide")
-
 # --- ADVANCED DASHBOARD THEME CSS ---
 st.markdown(
     """
