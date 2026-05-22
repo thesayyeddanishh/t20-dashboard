@@ -1100,9 +1100,14 @@ else:
 with filter_col2:
     batsman = st.selectbox("Batsman Name", batsmen_options, index=0)
 
+# Find the actual year column case-insensitively
+year_col = next((c for c in df_raw.columns if c.strip().lower() == 'year'), None)
+# Find the actual ground column case-insensitively
+ground_col = next((c for c in df_raw.columns if c.strip().lower() == 'ground'), None)
+
 # 3. Year Filter (in column 3)
-if "Year" in df_raw.columns:
-    year_options = ["All"] + sorted(df_raw["Year"].dropna().unique().astype(int).astype(str).tolist())
+if year_col:
+    year_options = ["All"] + sorted(df_raw[year_col].dropna().unique().astype(int).astype(str).tolist())
     with filter_col3:
         selected_year = st.selectbox("Year", year_options, index=0)
 else:
@@ -1111,14 +1116,15 @@ else:
         st.info("Year filter unavailable.")
 
 # 4. Venue Filter (in column 4)
-if "Ground" in df_raw.columns:
-    venue_options = ["All"] + sorted(df_raw["Ground"].dropna().unique().tolist())
+if ground_col:
+    venue_options = ["All"] + sorted(df_raw[ground_col].dropna().unique().tolist())
     with filter_col4:
         selected_venue = st.selectbox("Venue", venue_options, index=0)
 else:
     selected_venue = "All"
     with filter_col4:
-        st.info("Venue filter unavailable.")    
+        st.info("Venue filter unavailable.")
+        
 # =========================================================
 
 # --- Apply Filters to the Raw dataframes ---
@@ -1132,13 +1138,15 @@ def apply_filters(df):
     if batsman != "All":
         df_filtered = df_filtered[df_filtered["BatsmanName"] == batsman]
         
-    # Apply Year Filter (Only if column exists)
-    if selected_year != "All" and "Year" in df_filtered.columns:
-        df_filtered = df_filtered[df_filtered["Year"].astype(int) == int(selected_year)]
+    # Apply Year Filter cleanly matching the found column name
+    actual_year_col = next((c for c in df_filtered.columns if c.strip().lower() == 'year'), None)
+    if selected_year != "All" and actual_year_col:
+        df_filtered = df_filtered[df_filtered[actual_year_col].astype(int) == int(selected_year)]
         
-    # Apply Venue Filter (Only if column exists)
-    if selected_venue != "All" and "Ground" in df_filtered.columns:
-        df_filtered = df_filtered[df_filtered["Ground"] == selected_venue]
+    # Apply Venue Filter cleanly matching the found column name
+    actual_ground_col = next((c for c in df_filtered.columns if c.strip().lower() == 'ground'), None)
+    if selected_venue != "All" and actual_ground_col:
+        df_filtered = df_filtered[df_filtered[actual_ground_col] == selected_venue]
         
     return df_filtered
 
