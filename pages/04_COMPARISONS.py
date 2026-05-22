@@ -80,7 +80,7 @@ st.markdown(
 )
 
 # Header Section
-st.title("Player Performance Comparison")
+st.title("Player Performance Leaderboard")
 st.write("---")
 
 # --- 1. SESSION STATE DATA CHECK ---
