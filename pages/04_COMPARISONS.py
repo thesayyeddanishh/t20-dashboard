@@ -250,7 +250,7 @@ else:
                     leaderboard.columns = col_titles
 
                     # Clean descriptive table subheader capturing all filters
-                    st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2}) | Phase: {f_overs}")
+                    st.subheader(f"Top 10 Pacers' Performance vs {filter_label}")
 
                     column_configuration = {
                         "Bowler": st.column_config.TextColumn(width=200),
