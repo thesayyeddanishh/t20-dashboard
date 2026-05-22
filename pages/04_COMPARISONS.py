@@ -58,6 +58,21 @@ else:
     df_filtered = pd.DataFrame()
     filter_label = ""
 
+    # Row 2: Secondary situational constraints and volume limits (Shared visually across roles)
+    row2_col1, row2_col2 = st.columns(2)
+    
+    with row2_col1:
+        f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
+
+    # Global/Base phase filtering adjustment rule applied to the primary dataframe copy
+    if "Over" in df_raw.columns:
+        if f_overs == "Powerplay (1-6)":
+            df_raw = df_raw[df_raw["Over"] < 6]
+        elif f_overs == "Middle (7-16)":
+            df_raw = df_raw[(df_raw["Over"] >= 6) & (df_raw["Over"] < 16)]
+        elif f_overs == "Death (17-20)":
+            df_raw = df_raw[df_raw["Over"] >= 16]
+
     # ==================================================================
     # BRANCH 1: BATTERS SELECTION
     # ==================================================================
@@ -95,9 +110,7 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
 
-        # Row 2: Secondary Threshold inputs
-        row2_col1, row2_col2 = st.columns([1, 2])
-        with row2_col1:
+        with row2_col2:
             min_balls = st.number_input("Minimum balls faced", min_value=1, value=10, step=1)
 
         # --- GENERATE BATTERS DATA TABLE LEADERBOARD ---
@@ -121,7 +134,7 @@ else:
                 
                 leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
                 
-                st.subheader(f"📊 Top 10 Batters by Strike Rate vs {filter_label} (Min {min_balls} Balls)")
+                st.subheader(f"📊 Top 10 Batters by Strike Rate vs {filter_label} (Min {min_balls} Balls) | Phase: {f_overs}")
                 
                 column_configuration = {
                     "Batter": st.column_config.TextColumn(width=200),
@@ -171,7 +184,7 @@ else:
                 elif f3 == "LENGTH":
                     df_filtered = df_role_base[(df_role_base["BounceX"] >= 5.8) & (df_role_base["BounceX"] < 8.0)]
                 elif f3 == "SHORT":
-                    df_role_base[(df_role_base["BounceX"] >= 8.0) & (df_role_base["BounceX"] < 10.0)]
+                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 8.0) & (df_role_base["BounceX"] < 10.0)]
                 elif f3 == "BOUNCER":
                     df_filtered = df_role_base[df_role_base["BounceX"] >= 10.0]
                     
@@ -184,30 +197,8 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_role_base[df_role_base["ReleaseSpeed"] < 125]
 
-        # Row 2: Secondary situational constraints and volume limits
-        row2_col1, row2_col2 = st.columns(2)
-        
-        with row2_col1:
-            f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
-        
         with row2_col2:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
-
-        # Apply the selected match phase filter to both our baseline database and contextual slice
-        if "Over" in df_raw.columns:
-            if f_overs == "Powerplay (1-6)":
-                # Over index matching handles raw database rules (0.1 to 5.6 is under 6)
-                df_role_base = df_role_base[df_role_base["Over"] < 6]
-                if not df_filtered.empty:
-                    df_filtered = df_filtered[df_filtered["Over"] < 6]
-            elif f_overs == "Middle (7-16)":
-                df_role_base = df_role_base[(df_role_base["Over"] >= 6) & (df_role_base["Over"] < 16)]
-                if not df_filtered.empty:
-                    df_filtered = df_filtered[(df_filtered["Over"] >= 6) & (df_filtered["Over"] < 16)]
-            elif f_overs == "Death (17-20)":
-                df_role_base = df_role_base[df_role_base["Over"] >= 16]
-                if not df_filtered.empty:
-                    df_filtered = df_filtered[df_filtered["Over"] >= 16]
 
         # --- PACERS COMPUTATION ENGINE ---
         if "BowlerName" in df_raw.columns:
@@ -321,10 +312,6 @@ else:
                 filter_label = f3
                 df_filtered = df_role_base.copy()
 
-        # Row 2: Secondary selectors
-        row2_col1, row2_col2 = st.columns(2)
-        with row2_col1:
-            st.empty() # Visual balance structure placeholder
         with row2_col2:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
@@ -366,7 +353,7 @@ else:
                     leaderboard = leaderboard[final_cols]
                     leaderboard.columns = col_titles
 
-                    st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2})")
+                    st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2}) | Phase: {f_overs}")
 
                     column_configuration = {
                         "Bowler": st.column_config.TextColumn(width=200),
