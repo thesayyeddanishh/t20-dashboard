@@ -71,7 +71,7 @@ else:
                 
                 # Map selection to your pitch data ranges (BounceX)
                 if f3 == "FULL TOSS":
-                    df_filtered = df_raw[df_raw["BounceX"] < 0.5]
+                    df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "YORKER":
                     df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "THE SLOT":
@@ -97,7 +97,10 @@ else:
 
         # --- GENERATE DATA TABLE LEADERBOARD ---
         if not df_filtered.empty:
-            leaderboard = df_filtered.groupby("BatsmanName").agg(
+            # Fallback handling in case of layout variations between 'Batter' and 'BatsmanName'
+            batter_col = "Batter" if "Batter" in df_filtered.columns else "BatsmanName"
+            
+            leaderboard = df_filtered.groupby(batter_col).agg(
                 Runs=("Runs", "sum"),
                 Balls_Faced=("Wicket", "count"),
                 Dismissals=("Wicket", lambda x: sorted(x).count(True))
@@ -155,7 +158,7 @@ else:
                 
                 # Filter the subset based on pitch lengths using your exact bins
                 if f3 == "FULL TOSS":
-                    df_filtered = df_raw[df_raw["BounceX"] < 0.5]
+                    df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "YORKER":
                     df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "THE SLOT":
@@ -180,74 +183,76 @@ else:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
         # --- PACERS COMPUTATION ENGINE ---
-        # 1. Calculate overall metrics per bowler first (needed for total balls benchmark)
-        df_bowler_totals = df_raw.groupby("Bowler Name").agg(
-            Total_Balls=("Runs", "count")
-        ).reset_index()
-
-        if not df_filtered.empty:
-            # 2. Aggregating data within our selected scenario slice
-            leaderboard = df_filtered.groupby("Bowler Name").agg(
-                Runs_Conceded=("Runs", "sum"),
-                Balls_Bowled=("Runs", "count"),
-                Wickets=("Wicket", lambda x: sorted(x).count(True))
+        if "Bowler Name" in df_raw.columns:
+            # Calculate overall total balls per bowler first (crucial for % by lengths scaling metric)
+            df_bowler_totals = df_raw.groupby("Bowler Name").agg(
+                Total_Balls=("Runs", "count")
             ).reset_index()
 
-            # Merge with overall totals to calculate relative percentages accurately
-            leaderboard = leaderboard.merge(df_bowler_totals, on="Bowler Name", how="left")
+            if not df_filtered.empty:
+                # Group data within our active context filter subset slice
+                leaderboard = df_filtered.groupby("Bowler Name").agg(
+                    Runs_Conceded=("Runs", "sum"),
+                    Balls_Bowled=("Runs", "count"),
+                    Wickets=("Wicket", lambda x: sorted(x).count(True))
+                ).reset_index()
 
-            # Apply user's threshold check based on total scenario balls bowled
-            leaderboard = leaderboard[leaderboard["Balls_Bowled"] >= min_balls]
+                # Safely blend the totals back together 
+                leaderboard = leaderboard.merge(df_bowler_totals, on="Bowler Name", how="left")
 
-            if not leaderboard.empty:
-                # Calculate True Economy Rate -> (Runs / Balls) * 6
-                leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
-                leaderboard["Economy"] = leaderboard["Economy"].round(2)
+                # Enforce user threshold filtering boundary rules
+                leaderboard = leaderboard[leaderboard["Balls_Bowled"] >= min_balls]
 
-                # Calculate Percentage criteria based on view chosen
-                if f2 == "% by Lengths":
-                    leaderboard["% of Length"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
-                    leaderboard["% of Length"] = leaderboard["% of Length"].round(1)
-                    
-                    # Sort by percentage descending to highlight specialists
-                    leaderboard = leaderboard.sort_values(by="% of Length", ascending=False).head(10)
-                    
-                    final_cols = ["Bowler Name", "Balls_Bowled", "Wickets", "Economy", "% of Length"]
-                    col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Length"]
-                    pct_col_name = "% of Length"
+                if not leaderboard.empty:
+                    # Calculate true Economy Rate metric formula
+                    leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
+                    leaderboard["Economy"] = leaderboard["Economy"].round(2)
+
+                    # Branch sorting logic order pathways based on notebook map rules
+                    if f2 == "% by Lengths":
+                        leaderboard["% of Length"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
+                        leaderboard["% of Length"] = leaderboard["% of Length"].round(1)
+                        
+                        # High percentage mapping takes precedence
+                        leaderboard = leaderboard.sort_values(by="% of Length", ascending=False).head(10)
+                        
+                        final_cols = ["Bowler Name", "Balls_Bowled", "Wickets", "Economy", "% of Length"]
+                        col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Length"]
+                        pct_col_name = "% of Length"
+                    else:
+                        # Standard economy display ranks lower runs conceded values to the top
+                        leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
+                        
+                        final_cols = ["Bowler Name", "Balls_Bowled", "Wickets", "Economy"]
+                        col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
+                        pct_col_name = None
+
+                    # Format visual components safely
+                    leaderboard = leaderboard[final_cols]
+                    leaderboard.columns = col_titles
+
+                    st.subheader(f"📊 Top 10 Pacers Performance vs {filter_label} ({f2})")
+
+                    column_configuration = {
+                        "Bowler": st.column_config.TextColumn(width=200),
+                        "Balls": st.column_config.NumberColumn(alignment="center", width=75),
+                        "Wickets": st.column_config.NumberColumn(alignment="center", width=75),
+                        "Economy": st.column_config.NumberColumn(alignment="center", width=85),
+                    }
+                    if pct_col_name:
+                        column_configuration[pct_col_name] = st.column_config.NumberColumn(alignment="center", width=100, format="%.1f%%")
+
+                    st.dataframe(
+                        leaderboard.set_index("Bowler"), 
+                        use_container_width=False, 
+                        column_config=column_configuration
+                    )
                 else:
-                    # For standard Economy rankings, sort ascending (lower economy is top performance)
-                    leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
-                    
-                    final_cols = ["Bowler Name", "Balls_Bowled", "Wickets", "Economy"]
-                    col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
-                    pct_col_name = None
-
-                # Clean up and structure dataframe columns
-                leaderboard = leaderboard[final_cols]
-                leaderboard.columns = col_titles
-
-                st.subheader(f"📊 Top 10 Pacers Performance vs {filter_label} ({f2})")
-
-                # Setup column configuration widths and alignments
-                column_configuration = {
-                    "Bowler": st.column_config.TextColumn(width=200),
-                    "Balls": st.column_config.NumberColumn(alignment="center", width=75),
-                    "Wickets": st.column_config.NumberColumn(alignment="center", width=75),
-                    "Economy": st.column_config.NumberColumn(alignment="center", width=85),
-                }
-                if pct_col_name:
-                    column_configuration[pct_col_name] = st.column_config.NumberColumn(alignment="center", width=100, format="%.1f%%")
-
-                st.dataframe(
-                    leaderboard.set_index("Bowler"), 
-                    use_container_width=False, 
-                    column_config=column_configuration
-                )
+                    st.info(f"No pacers met the threshold rules of bowling at least {min_balls} balls in this scenario.")
             else:
-                st.info(f"No pacers met the threshold rules of bowling at least {min_balls} balls in this scenario.")
+                st.info("No delivery records found matching this filter combo in your data.")
         else:
-            st.info("No delivery records found matching this filter combo in your data.")
+            st.error("⚠️ Column tracking identifier 'Bowler Name' missing in uploaded sheet format structure.")
 
     # ==================================================================
     # BRANCH 3: SPINNERS PLACEHOLDER
