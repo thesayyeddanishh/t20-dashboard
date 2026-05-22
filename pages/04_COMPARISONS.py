@@ -109,10 +109,10 @@ else:
                 # Setting width (in pixels) forces the table to shrink away from the full layout width.
                 column_configuration = {
                     "Batter": st.column_config.TextColumn(width=200),
-                    "Runs": st.column_config.NumberColumn(alignment="center", width=80),
-                    "Balls faced": st.column_config.NumberColumn(alignment="center", width=80),
-                    "Dismissals": st.column_config.NumberColumn(alignment="center", width=80),
-                    "Strike Rate": st.column_config.NumberColumn(alignment="center", width=120),
+                    "Runs": st.column_config.NumberColumn(alignment="center", width=75),
+                    "Balls faced": st.column_config.NumberColumn(alignment="center", width=75),
+                    "Dismissals": st.column_config.NumberColumn(alignment="center", width=75),
+                    "Strike Rate": st.column_config.NumberColumn(alignment="center", width=100),
                 }
                 
                 # Render using an isolated layout container grid
