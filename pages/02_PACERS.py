@@ -982,7 +982,7 @@ else:
     st.warning("The 'BowlingTeam' column was not found. Displaying all Batting Teams as a fallback.")
 
 # 3. FILTERS (Bowling Team, Bowler, and Innings)
-filter_col1, filter_col2, filter_col3 = st.columns(3) 
+filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4) 
 
 # --- Render Bowling Team Filter (Col 1) ---
 all_teams = ["All"] + sorted(df_seam_base[team_column].dropna().unique().tolist())
