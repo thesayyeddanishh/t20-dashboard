@@ -9,7 +9,6 @@ st.title("🏆 Player Performance Comparison")
 st.markdown("Instantly rank players based on custom situational criteria and thresholds.")
 
 # --- 1. SESSION STATE DATA CHECK ---
-# Checking if 'data_df' (the key used in your HOME.py) exists
 if 'data_df' not in st.session_state or st.session_state['data_df'] is None:
     st.warning("⚠️ No data found! Please go back to the HOME page and upload your CSV file first.")
 else:
@@ -23,9 +22,13 @@ else:
     df_raw["Runs"] = pd.to_numeric(df_raw["Runs"], errors="coerce").fillna(0)
 
     # ------------------------------------------------------------------
-    # --- FILTER 1: PRIMARY CATEGORY ---
+    # --- DYNAMIC HORIZONTAL FILTER ROW ---
     # ------------------------------------------------------------------
-    f1 = st.selectbox("Select Role Category (FILTER 1)", ["BATTERS", "PACERS", "SPINNERS"])
+    # Create 4 columns side-by-side for your filters and criteria threshold
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        f1 = st.selectbox("Category (FILTER 1)", ["BATTERS", "PACERS", "SPINNERS"])
     
     # Objects to hold our conditional data slice
     df_filtered = pd.DataFrame()
@@ -35,42 +38,43 @@ else:
     # BRANCH 1: BATTERS SELECTION
     # ==================================================================
     if f1 == "BATTERS":
-        # --- FILTER 2: VIEW TYPE ---
-        f2 = st.selectbox("Select View Type (FILTER 2)", ["LENGTH", "PACE"])
         
-        # --- FILTER 3: THE END SELECTION ---
-        if f2 == "LENGTH":
-            f3 = st.selectbox(
-                "Select Length Category (FILTER 3)", 
-                ["FULL TOSS", "YORKER", "THE SLOT", "LENGTH", "SHORT", "BOUNCER"]
-            )
-            filter_label = f3
-            
-            # Map selection to your pitch data ranges (BounceX)
-            if f3 == "FULL TOSS":
-                df_filtered = df_raw[df_raw["BounceX"].isnull()]
-            elif f3 == "YORKER":
-                df_filtered = df_raw[df_raw["BounceX"] < 2.8]
-            elif f3 == "THE SLOT":
-                df_filtered = df_raw[(df_raw["BounceX"] >= 2.8) & (df_raw["BounceX"] < 4.4)]
-            elif f3 == "LENGTH":
-                df_filtered = df_raw[(df_raw["BounceX"] >= 4.4) & (df_raw["BounceX"] < 6.2)]
-            elif f3 == "SHORT":
-                df_filtered = df_raw[(df_raw["BounceX"] >= 6.2) & (df_raw["BounceX"] < 8.5)]
-            elif f3 == "BOUNCER":
-                df_filtered = df_raw[df_raw["BounceX"] >= 8.5]
+        with col2:
+            f2 = st.selectbox("View Type (FILTER 2)", ["LENGTH", "PACE"])
+        
+        with col3:
+            if f2 == "LENGTH":
+                f3 = st.selectbox(
+                    "Length (FILTER 3)", 
+                    ["FULL TOSS", "YORKER", "THE SLOT", "LENGTH", "SHORT", "BOUNCER"]
+                )
+                filter_label = f3
+                
+                # Map selection to your pitch data ranges (BounceX)
+                if f3 == "FULL TOSS":
+                    df_filtered = df_raw[df_raw["BounceX"]<0.5]
+                elif f3 == "YORKER":
+                    df_filtered = df_raw[df_raw["BounceX"] < 2.5]
+                elif f3 == "THE SLOT":
+                    df_filtered = df_raw[(df_raw["BounceX"] >= 2.5) & (df_raw["BounceX"] < 5.8)]
+                elif f3 == "LENGTH":
+                    df_filtered = df_raw[(df_raw["BounceX"] >= 5.8) & (df_raw["BounceX"] < 8.0)]
+                elif f3 == "SHORT":
+                    df_filtered = df_raw[(df_raw["BounceX"] >= 8.0) & (df_raw["BounceX"] < 10.0)]
+                elif f3 == "BOUNCER":
+                    df_filtered = df_raw[df_raw["BounceX"] >= 10.0]
 
-        elif f2 == "PACE":
-            f3 = st.selectbox("Select Pace Category (FILTER 3)", ["Above 140", "Below 125"])
-            filter_label = f"Pace ({f3} kph)"
-            
-            if f3 == "Above 140":
-                df_filtered = df_raw[df_raw["ReleaseSpeed"] > 140]
-            elif f3 == "Below 125":
-                df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
+            elif f2 == "PACE":
+                f3 = st.selectbox("Pace (FILTER 3)", ["Above 140", "Below 125"])
+                filter_label = f"Pace ({f3} kph)"
+                
+                if f3 == "Above 140":
+                    df_filtered = df_raw[df_raw["ReleaseSpeed"] > 140]
+                elif f3 == "Below 125":
+                    df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
 
-        # --- INPUT BOX FOR MINIMUM BALLS CRITERIA ---
-        min_balls = st.number_input("Minimum Balls Faced Criteria", min_value=1, value=10, step=5)
+        with col4:
+            min_balls = st.number_input("Min Balls Criteria", min_value=1, value=10, step=1)
 
         # --- GENERATE DATA TABLE LEADERBOARD ---
         if not df_filtered.empty:
@@ -91,7 +95,7 @@ else:
                 # Sort by Strike Rate descending and get top 10 rows
                 leaderboard = leaderboard.sort_values(by="Strike Rate", ascending=False).head(10)
                 
-                # Format formatting columns neatly
+                # Format columns neatly
                 leaderboard["Strike Rate"] = leaderboard["Strike Rate"].round(1)
                 leaderboard["Runs"] = leaderboard["Runs"].astype(int)
                 
