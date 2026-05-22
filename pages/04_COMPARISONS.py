@@ -27,6 +27,7 @@ st.markdown(
 
 st.title("🏆 Player Performance Comparison")
 st.markdown("Instantly rank players based on custom situational criteria and thresholds.")
+st.write("---")
 
 # --- 1. SESSION STATE DATA CHECK ---
 if 'data_df' not in st.session_state or st.session_state['data_df'] is None:
@@ -46,41 +47,42 @@ else:
         df_raw["Over"] = pd.to_numeric(df_raw["Over"], errors="coerce")
 
     # ------------------------------------------------------------------
-    # --- DYNAMIC HORIZONTAL FILTER LAYOUT ---
+    # --- SPLIT SCREEN LAYOUT DESIGN ---
     # ------------------------------------------------------------------
-    # Row 1: Core category and view parameters
-    row1_col1, row1_col2, row1_col3 = st.columns(3)
+    # Left column gets 75% width for the Table, Right column gets 25% for the Filters
+    main_display_col, filter_panel_col = st.columns([3, 1])
 
-    with row1_col1:
-        f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
-    
     # Objects to hold our conditional data slice
     df_filtered = pd.DataFrame()
     filter_label = ""
 
-    # Row 2: Secondary situational constraints and volume limits (Shared visually across roles)
-    row2_col1, row2_col2 = st.columns(2)
-    
-    with row2_col1:
+    # ==================================================================
+    # STEP 2: RENDER CONTROLS IN THE RIGHT FILTER PANEL
+    # ==================================================================
+    with filter_panel_col:
+        st.subheader("⚙️ Control Panel")
+        
+        # Filter 1: Player Role Selection
+        f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
+        
+        # Shared Filter 2: Match Phase Filter (Overs)
         f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
 
-    # Global/Base phase filtering adjustment rule applied to the primary dataframe copy
-    if "Over" in df_raw.columns:
-        if f_overs == "Powerplay (1-6)":
-            df_raw = df_raw[df_raw["Over"] < 6]
-        elif f_overs == "Middle (7-16)":
-            df_raw = df_raw[(df_raw["Over"] >= 6) & (df_raw["Over"] < 16)]
-        elif f_overs == "Death (17-20)":
-            df_raw = df_raw[df_raw["Over"] >= 16]
+        # Apply global Match Phase Filtering to df_raw
+        if "Over" in df_raw.columns:
+            if f_overs == "Powerplay (1-6)":
+                df_raw = df_raw[df_raw["Over"] < 6]
+            elif f_overs == "Middle (7-16)":
+                df_raw = df_raw[(df_raw["Over"] >= 6) & (df_raw["Over"] < 16)]
+            elif f_overs == "Death (17-20)":
+                df_raw = df_raw[df_raw["Over"] >= 16]
 
-    # ==================================================================
-    # BRANCH 1: BATTERS SELECTION
-    # ==================================================================
-    if f1 == "BATTERS":
-        with row1_col2:
+        # Conditional Filters based on Selected Role
+        if f1 == "BATTERS":
+            # Filter 3: Selection Strategy Type
             f2 = st.selectbox("SR by Length / Pace", ["LENGTH", "PACE"])
-        
-        with row1_col3:
+            
+            # Filter 4: Core Dynamic Criteria Box
             if f2 == "LENGTH":
                 f3 = st.selectbox(
                     "Select Length", 
@@ -110,64 +112,17 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
 
-        with row2_col2:
+            # Filter 5: Minimum volume requirements threshold
             min_balls = st.number_input("Minimum balls faced", min_value=1, value=10, step=1)
 
-        # --- GENERATE BATTERS DATA TABLE LEADERBOARD ---
-        if not df_filtered.empty:
-            batter_col = "Batter" if "Batter" in df_filtered.columns else "BatsmanName"
+        elif f1 == "PACERS":
+            df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "seam"] if "DeliveryType" in df_raw.columns else df_raw.copy()
             
-            leaderboard = df_filtered.groupby(batter_col).agg(
-                Runs=("Runs", "sum"),
-                Balls_Faced=("Wicket", "count"),
-                Dismissals=("Wicket", lambda x: sorted(x).count(True))
-            ).reset_index()
-
-            leaderboard = leaderboard[leaderboard["Balls_Faced"] >= min_balls]
-
-            if not leaderboard.empty:
-                leaderboard["Strike Rate"] = (leaderboard["Runs"] / leaderboard["Balls_Faced"]) * 100
-                leaderboard = leaderboard.sort_values(by="Strike Rate", ascending=False).head(10)
-                
-                leaderboard["Strike Rate"] = leaderboard["Strike Rate"].round(1)
-                leaderboard["Runs"] = leaderboard["Runs"].astype(int)
-                
-                leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
-                
-                st.subheader(f" Top 10 Batters by Strike Rate vs {filter_label} (Min {min_balls} Balls)")
-             
-                column_configuration = {
-                    "Batter": st.column_config.TextColumn(width=200),
-                    "Runs": st.column_config.NumberColumn(alignment="center", width=75),
-                    "Balls faced": st.column_config.NumberColumn(alignment="center", width=75),
-                    "Dismissals": st.column_config.NumberColumn(alignment="center", width=75),
-                    "Strike Rate": st.column_config.NumberColumn(alignment="center", width=100),
-                }
-                
-                st.dataframe(
-                    leaderboard.set_index("Batter"), 
-                    use_container_width=False, 
-                    column_config=column_configuration
-                )
-            else:
-                st.info(f"No batters met the threshold rules of facing at least {min_balls} balls in this selection.")
-        else:
-            st.info("No delivery records found matching this filter combo in your data.")
-
-    # ==================================================================
-    # BRANCH 2: PACERS SELECTION
-    # ==================================================================
-    elif f1 == "PACERS":
-        # Global filter restriction for Pacers
-        df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "seam"] if "DeliveryType" in df_raw.columns else df_raw.copy()
-        
-        with row1_col2:
             f2 = st.selectbox(
                 "View Type", 
                 ["Economy By Length", "% by Lengths", "Economy by Pace", "% Balls by Pace"]
             )
-        
-        with row1_col3:
+            
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
                     "Select Length", 
@@ -197,96 +152,16 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_role_base[df_role_base["ReleaseSpeed"] < 125]
 
-        with row2_col2:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
-        # --- PACERS COMPUTATION ENGINE ---
-        if "BowlerName" in df_raw.columns:
-            # Denominator tracks legal active deliveries for the selected context
-            df_bowler_totals = df_role_base.groupby("BowlerName").agg(
-                Total_Balls=("Runs", "count")
-            ).reset_index()
-
-            if not df_filtered.empty:
-                leaderboard = df_filtered.groupby("BowlerName").agg(
-                    Runs_Conceded=("Runs", "sum"),
-                    Balls_Bowled=("Runs", "count"),
-                    Wickets=("Wicket", lambda x: sorted(x).count(True))
-                ).reset_index()
-
-                leaderboard = leaderboard.merge(df_bowler_totals, on="BowlerName", how="left")
-                leaderboard = leaderboard[leaderboard["Balls_Bowled"] >= min_balls]
-
-                if not leaderboard.empty:
-                    leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
-                    leaderboard["Economy"] = leaderboard["Economy"].round(2)
-
-                    if f2 == "% by Lengths":
-                        leaderboard["% of Length"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
-                        leaderboard["% of Length"] = leaderboard["% of Length"].round(1)
-                        leaderboard = leaderboard.sort_values(by="% of Length", ascending=False).head(10)
-                        
-                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% of Length"]
-                        col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Length"]
-                        pct_col_name = "% of Length"
-                        
-                    elif f2 == "% Balls by Pace":
-                        leaderboard["% of Pace Context"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
-                        leaderboard["% of Pace Context"] = leaderboard["% of Pace Context"].round(1)
-                        leaderboard = leaderboard.sort_values(by="% of Pace Context", ascending=False).head(10)
-                        
-                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% of Pace Context"]
-                        col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Pace"]
-                        pct_col_name = "% of Pace"
-                        
-                    else:
-                        leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
-                        
-                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy"]
-                        col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
-                        pct_col_name = None
-
-                    leaderboard = leaderboard[final_cols]
-                    leaderboard.columns = col_titles
-
-                    # Clean descriptive table subheader capturing all filters
-                    st.subheader(f"Top 10 Pacers' Performance vs {filter_label}")
-
-                    column_configuration = {
-                        "Bowler": st.column_config.TextColumn(width=200),
-                        "Balls": st.column_config.NumberColumn(alignment="center", width=75),
-                        "Wickets": st.column_config.NumberColumn(alignment="center", width=75),
-                        "Economy": st.column_config.NumberColumn(alignment="center", width=85),
-                    }
-                    if pct_col_name:
-                        column_configuration[pct_col_name] = st.column_config.NumberColumn(alignment="center", width=100, format="%.1f%%")
-
-                    st.dataframe(
-                        leaderboard.set_index("Bowler"), 
-                        use_container_width=False, 
-                        column_config=column_configuration
-                    )
-                else:
-                    st.info(f"No pacers met the threshold rules of bowling at least {min_balls} balls in this scenario.")
-            else:
-                st.info("No delivery records found matching this filter combo in your data.")
-        else:
-            st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
-
-    # ==================================================================
-    # BRANCH 3: SPINNERS SELECTION
-    # ==================================================================
-    elif f1 == "SPINNERS":
-        # Global filter restriction for Spinners
-        df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "spin"] if "DeliveryType" in df_raw.columns else df_raw.copy()
-        
-        with row1_col2:
+        elif f1 == "SPINNERS":
+            df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "spin"] if "DeliveryType" in df_raw.columns else df_raw.copy()
+            
             f2 = st.selectbox(
                 "View Type", 
                 ["Economy By Length", "% by Lengths", "% /Away/No/In (TURN)"]
             )
-        
-        with row1_col3:
+            
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
                     "Select Length", 
@@ -312,66 +187,169 @@ else:
                 filter_label = f3
                 df_filtered = df_role_base.copy()
 
-        with row2_col2:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
-        # --- SPINNERS COMPUTATION ENGINE ---
-        if "BowlerName" in df_raw.columns:
-            df_bowler_totals = df_role_base.groupby("BowlerName").agg(
-                Total_Balls=("Runs", "count")
-            ).reset_index()
-
+    # ==================================================================
+    # STEP 3: EXECUTE CALCULATIONS & RENDER LEADERBOARDS ON LEFT SIDE
+    # ==================================================================
+    with main_display_col:
+        
+        # --- RENDER ENGINE: BATTERS ---
+        if f1 == "BATTERS":
             if not df_filtered.empty:
-                leaderboard = df_filtered.groupby("BowlerName").agg(
-                    Runs_Conceded=("Runs", "sum"),
-                    Balls_Bowled=("Runs", "count"),
-                    Wickets=("Wicket", lambda x: sorted(x).count(True))
+                batter_col = "Batter" if "Batter" in df_filtered.columns else "BatsmanName"
+                
+                leaderboard = df_filtered.groupby(batter_col).agg(
+                    Runs=("Runs", "sum"),
+                    Balls_Faced=("Wicket", "count"),
+                    Dismissals=("Wicket", lambda x: sorted(x).count(True))
                 ).reset_index()
 
-                leaderboard = leaderboard.merge(df_bowler_totals, on="BowlerName", how="left")
-                leaderboard = leaderboard[leaderboard["Balls_Bowled"] >= min_balls]
+                leaderboard = leaderboard[leaderboard["Balls_Faced"] >= min_balls]
 
                 if not leaderboard.empty:
-                    leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
-                    leaderboard["Economy"] = leaderboard["Economy"].round(2)
-
-                    if f2 in ["% by Lengths", "% /Away/No/In (TURN)"]:
-                        leaderboard["% Metric"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
-                        leaderboard["% Metric"] = leaderboard["% Metric"].round(1)
-                        leaderboard = leaderboard.sort_values(by="% Metric", ascending=False).head(10)
-                        
-                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% Metric"]
-                        col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% Metric"]
-                        pct_col_name = "% Metric"
-                    else:
-                        leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
-                        
-                        final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy"]
-                        col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
-                        pct_col_name = None
-
-                    leaderboard = leaderboard[final_cols]
-                    leaderboard.columns = col_titles
-
-                    st.subheader(f"Top 10 Spinners Performance vs {filter_label}")
-
+                    leaderboard["Strike Rate"] = (leaderboard["Runs"] / leaderboard["Balls_Faced"]) * 100
+                    leaderboard = leaderboard.sort_values(by="Strike Rate", ascending=False).head(10)
+                    
+                    leaderboard["Strike Rate"] = leaderboard["Strike Rate"].round(1)
+                    leaderboard["Runs"] = leaderboard["Runs"].astype(int)
+                    
+                    leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
+                    
+                    st.subheader(f"📊 Top 10 Batters by Strike Rate vs {filter_label}")
+                    st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Faced")
+                    
                     column_configuration = {
-                        "Bowler": st.column_config.TextColumn(width=200),
-                        "Balls": st.column_config.NumberColumn(alignment="center", width=75),
-                        "Wickets": st.column_config.NumberColumn(alignment="center", width=75),
-                        "Economy": st.column_config.NumberColumn(alignment="center", width=85),
+                        "Batter": st.column_config.TextColumn(width=200),
+                        "Runs": st.column_config.NumberColumn(alignment="center", width=75),
+                        "Balls faced": st.column_config.NumberColumn(alignment="center", width=75),
+                        "Dismissals": st.column_config.NumberColumn(alignment="center", width=75),
+                        "Strike Rate": st.column_config.NumberColumn(alignment="center", width=100),
                     }
-                    if pct_col_name:
-                        column_configuration[pct_col_name] = st.column_config.NumberColumn(alignment="center", width=100, format="%.1f%%")
-
+                    
                     st.dataframe(
-                        leaderboard.set_index("Bowler"), 
-                        use_container_width=False, 
+                        leaderboard.set_index("Batter"), 
+                        use_container_width=True, # Allow it to flex fully within the 75% boundary row
                         column_config=column_configuration
                     )
                 else:
-                    st.info(f"No spinners met the threshold rules of bowling at least {min_balls} balls in this scenario.")
+                    st.info(f"No batters met the threshold rules of facing at least {min_balls} balls in this selection.")
             else:
                 st.info("No delivery records found matching this filter combo in your data.")
-        else:
-            st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
+
+        # --- RENDER ENGINE: PACERS ---
+        elif f1 == "PACERS":
+            if "BowlerName" in df_raw.columns:
+                df_bowler_totals = df_role_base.groupby("BowlerName").agg(Total_Balls=("Runs", "count")).reset_index()
+
+                if not df_filtered.empty:
+                    leaderboard = df_filtered.groupby("BowlerName").agg(
+                        Runs_Conceded=("Runs", "sum"),
+                        Balls_Bowled=("Runs", "count"),
+                        Wickets=("Wicket", lambda x: sorted(x).count(True))
+                    ).reset_index()
+
+                    leaderboard = leaderboard.merge(df_bowler_totals, on="BowlerName", how="left")
+                    leaderboard = leaderboard[leaderboard["Balls_Bowled"] >= min_balls]
+
+                    if not leaderboard.empty:
+                        leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
+                        leaderboard["Economy"] = leaderboard["Economy"].round(2)
+
+                        if f2 == "% by Lengths":
+                            leaderboard["% of Length"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
+                            leaderboard["% of Length"] = leaderboard["% of Length"].round(1)
+                            leaderboard = leaderboard.sort_values(by="% of Length", ascending=False).head(10)
+                            final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% of Length"]
+                            col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Length"]
+                            pct_col_name = "% of Length"
+                        elif f2 == "% Balls by Pace":
+                            leaderboard["% of Pace Context"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
+                            leaderboard["% of Pace Context"] = leaderboard["% of Pace Context"].round(1)
+                            leaderboard = leaderboard.sort_values(by="% of Pace Context", ascending=False).head(10)
+                            final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% of Pace Context"]
+                            col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% of Pace"]
+                            pct_col_name = "% of Pace"
+                        else:
+                            leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
+                            final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy"]
+                            col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
+                            pct_col_name = None
+
+                        leaderboard = leaderboard[final_cols]
+                        leaderboard.columns = col_titles
+
+                        st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2})")
+                        st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
+
+                        column_configuration = {
+                            "Bowler": st.column_config.TextColumn(width=200),
+                            "Balls": st.column_config.NumberColumn(alignment="center", width=75),
+                            "Wickets": st.column_config.NumberColumn(alignment="center", width=75),
+                            "Economy": st.column_config.NumberColumn(alignment="center", width=85),
+                        }
+                        if pct_col_name:
+                            column_configuration[pct_col_name] = st.column_config.NumberColumn(alignment="center", width=100, format="%.1f%%")
+
+                        st.dataframe(leaderboard.set_index("Bowler"), use_container_width=True, column_config=column_configuration)
+                    else:
+                        st.info(f"No pacers met the threshold rules of bowling at least {min_balls} balls in this scenario.")
+                else:
+                    st.info("No delivery records found matching this filter combo in your data.")
+            else:
+                st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
+
+        # --- RENDER ENGINE: SPINNERS ---
+        elif f1 == "SPINNERS":
+            if "BowlerName" in df_raw.columns:
+                df_bowler_totals = df_role_base.groupby("BowlerName").agg(Total_Balls=("Runs", "count")).reset_index()
+
+                if not df_filtered.empty:
+                    leaderboard = df_filtered.groupby("BowlerName").agg(
+                        Runs_Conceded=("Runs", "sum"),
+                        Balls_Bowled=("Runs", "count"),
+                        Wickets=("Wicket", lambda x: sorted(x).count(True))
+                    ).reset_index()
+
+                    leaderboard = leaderboard.merge(df_bowler_totals, on="BowlerName", how="left")
+                    leaderboard = leaderboard[leaderboard["Balls_Bowled"] >= min_balls]
+
+                    if not leaderboard.empty:
+                        leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
+                        leaderboard["Economy"] = leaderboard["Economy"].round(2)
+
+                        if f2 in ["% by Lengths", "% /Away/No/In (TURN)"]:
+                            leaderboard["% Metric"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
+                            leaderboard["% Metric"] = leaderboard["% Metric"].round(1)
+                            leaderboard = leaderboard.sort_values(by="% Metric", ascending=False).head(10)
+                            final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy", "% Metric"]
+                            col_titles = ["Bowler", "Balls", "Wickets", "Economy", "% Metric"]
+                            pct_col_name = "% Metric"
+                        else:
+                            leaderboard = leaderboard.sort_values(by="Economy", ascending=True).head(10)
+                            final_cols = ["BowlerName", "Balls_Bowled", "Wickets", "Economy"]
+                            col_titles = ["Bowler", "Balls", "Wickets", "Economy"]
+                            pct_col_name = None
+
+                        leaderboard = leaderboard[final_cols]
+                        leaderboard.columns = col_titles
+
+                        st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2})")
+                        st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
+
+                        column_configuration = {
+                            "Bowler": st.column_config.TextColumn(width=200),
+                            "Balls": st.column_config.NumberColumn(alignment="center", width=75),
+                            "Wickets": st.column_config.NumberColumn(alignment="center", width=75),
+                            "Economy": st.column_config.NumberColumn(alignment="center", width=85),
+                        }
+                        if pct_col_name:
+                            column_configuration[pct_col_name] = st.column_config.NumberColumn(alignment="center", width=100, format="%.1f%%")
+
+                        st.dataframe(leaderboard.set_index("Bowler"), use_container_width=True, column_config=column_configuration)
+                    else:
+                        st.info(f"No spinners met the threshold rules of bowling at least {min_balls} balls in this scenario.")
+                else:
+                    st.info("No delivery records found matching this filter combo in your data.")
+            else:
+                st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
