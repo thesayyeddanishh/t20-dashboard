@@ -5,13 +5,30 @@ import numpy as np
 # Set page configuration to match your wide layout preference
 st.set_page_config(layout="wide")
 
-# --- CUSTOM CSS TO FORCE HEADER CENTERING ---
+# --- ADVANCED DASHBOARD THEME CSS ---
 st.markdown(
     """
     <style>
-        /* Force both standard and containerized table headers to align center */
+        /* Global Header Typography Changes */
+        h1 {
+            font-weight: 800 !important;
+            color: #1E293B !important;
+            letter-spacing: -0.5px;
+        }
+        h2, h3 {
+            font-weight: 700 !important;
+            color: #334155 !important;
+        }
+        
+        /* Table Styling Overrides */
         th[data-testid="stTableHeadCell"] {
             text-align: center !important;
+            background-color: #F8FAFC !important;
+            color: #475569 !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            font-size: 0.85rem !important;
+            border-bottom: 2px solid #E2E8F0 !important;
         }
         th {
             text-align: center !important;
@@ -20,18 +37,41 @@ st.markdown(
             justify-content: center !important;
             text-align: center !important;
         }
+        
+        /* Control Panel Sidebar Simulation Container */
+        div.filter-box {
+            background-color: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        /* Metric Card Micro-Styling */
+        div[data-testid="stMetricValue"] {
+            font-size: 1.8rem !important;
+            font-weight: 700 !important;
+            color: #0F172A !important;
+        }
+        div[data-testid="stMetricLabel"] {
+            font-size: 0.85rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            color: #64748B !important;
+        }
     </style>
     """,
     unsafe_allow_html=True
 )
 
+# Header Section
 st.title("🏆 Player Performance Comparison")
-st.markdown("Instantly rank players based on custom situational criteria and thresholds.")
+st.markdown("Instantly rank athletes based on deep custom situational criteria and data thresholds.")
 st.write("---")
 
 # --- 1. SESSION STATE DATA CHECK ---
 if 'data_df' not in st.session_state or st.session_state['data_df'] is None:
-    st.warning("⚠️ No data found! Please go back to the HOME page and upload your CSV file first.")
+    st.error("🚨 **No Data Found!** Please navigate back to the **HOME** page and upload your CSV tracking asset first.")
 else:
     # Safely extract and copy the dataframe
     df_raw = st.session_state['data_df'].copy()
@@ -50,24 +90,28 @@ else:
     # ------------------------------------------------------------------
     # --- SPLIT SCREEN LAYOUT DESIGN ---
     # ------------------------------------------------------------------
-    # Left column gets 75% width for the Table, Right column gets 25% for the Filters
-    main_display_col, filter_panel_col = st.columns([3, 1])
+    main_display_col, filter_panel_col = st.columns([3.1, 1], gap="large")
 
     # Objects to hold our conditional data slice
     df_filtered = pd.DataFrame()
     filter_label = ""
 
     # ==================================================================
-    # STEP 2: RENDER CONTROLS IN THE RIGHT FILTER PANEL
+    # STEP 2: RENDER CONTROLS IN THE RIGHT FILTER PANEL (SIDEBAR LOOK)
     # ==================================================================
     with filter_panel_col:
-        st.subheader("⚙️ Control Panel")
+        # Wrap everything in a nice styled container box
+        st.markdown('<div class="filter-box">', unsafe_allow_html=True)
+        st.subheader("⚙️ Config Panel")
+        st.markdown("Modify calculation rules below:")
         
         # Filter 1: Player Role Selection
         f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
+        st.write("") # subtle spacing
         
         # Shared Filter 2: Match Phase Filter (Overs)
         f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
+        st.write("")
 
         # Apply global Match Phase Filtering to df_raw
         if "Over" in df_raw.columns:
@@ -80,10 +124,9 @@ else:
 
         # Conditional Filters based on Selected Role
         if f1 == "BATTERS":
-            # Filter 3: Selection Strategy Type
             f2 = st.selectbox("SR by Length / Pace", ["LENGTH", "PACE"])
+            st.write("")
             
-            # Filter 4: Core Dynamic Criteria Box
             if f2 == "LENGTH":
                 f3 = st.selectbox(
                     "Select Length", 
@@ -113,7 +156,7 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
 
-            # Filter 5: Minimum volume requirements threshold
+            st.write("")
             min_balls = st.number_input("Minimum balls faced", min_value=1, value=10, step=1)
 
         elif f1 == "PACERS":
@@ -123,6 +166,7 @@ else:
                 "View Type", 
                 ["Economy By Length", "% by Lengths", "Economy by Pace", "% Balls by Pace"]
             )
+            st.write("")
             
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
@@ -153,6 +197,7 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_role_base[df_role_base["ReleaseSpeed"] < 125]
 
+            st.write("")
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
         elif f1 == "SPINNERS":
@@ -160,8 +205,9 @@ else:
             
             f2 = st.selectbox(
                 "View Type", 
-                ["Economy By Length", "% by Lengths", "Turn Direction"]
+                ["Economy By Length", "% by Lengths", "% /Turn (TURN)"]
             )
+            st.write("")
             
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
@@ -179,7 +225,7 @@ else:
                 elif f3 == "SHORT":
                     df_filtered = df_role_base[df_role_base["BounceX"] > 6.2]
                     
-            elif f2 == "Turn Direction":
+            elif f2 == "% /Turn (TURN)":
                 f3 = st.selectbox("Select Ball Turn Direction", ["Turn Left", "No Turn", "Turn Right"])
                 filter_label = f3
                 
@@ -190,7 +236,10 @@ else:
                 elif f3 == "Turn Right":
                     df_filtered = df_role_base[df_role_base["Deviation"] > 0.1]
 
+            st.write("")
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
+            
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ==================================================================
     # STEP 3: EXECUTE CALCULATIONS & RENDER LEADERBOARDS ON LEFT SIDE
@@ -219,8 +268,15 @@ else:
                     
                     leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
                     
-                    st.subheader(f"Top 10 Batters by Strike Rate vs {filter_label}")
-                    st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Faced")
+                    # Visual Upgrades: Header Context & Info Sub-bar
+                    st.subheader(f"📊 Top 10 Batters by Strike Rate vs {filter_label}")
+                    
+                    # Highlight Metrics summary dashboard blocks before table
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Matching Balls Faced", int(df_filtered.shape[0]))
+                    m2.metric("Total Runs Sliced", int(df_filtered["Runs"].sum()))
+                    m3.metric("Unique Batters Active", int(leaderboard.shape[0]))
+                    st.write("")
                     
                     column_configuration = {
                         "Batter": st.column_config.TextColumn(width=200),
@@ -236,9 +292,9 @@ else:
                         column_config=column_configuration
                     )
                 else:
-                    st.info(f"No batters met the threshold rules of facing at least {min_balls} balls in this selection.")
+                    st.info(f"📋 No batters found matching the minimum requirement threshold of {min_balls} balls faced.")
             else:
-                st.info("No delivery records found matching this filter combo in your data.")
+                st.info("ℹ️ No delivery metrics recorded in the raw data matching this custom query scenario.")
 
         # --- RENDER ENGINE: PACERS ---
         elif f1 == "PACERS":
@@ -282,8 +338,14 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"Top 10 Pacers' Performance vs {filter_label} ({f2})")
-                        st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
+                        st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2})")
+                        
+                        # Top line KPI Block metrics
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Matching Balls Bowled", int(df_filtered.shape[0]))
+                        m2.metric("Total Wickets Taken", int(df_filtered["Wicket"].sum()))
+                        m3.metric("Unique Pacers Active", int(leaderboard.shape[0]))
+                        st.write("")
 
                         column_configuration = {
                             "Bowler": st.column_config.TextColumn(width=200),
@@ -296,9 +358,9 @@ else:
 
                         st.dataframe(leaderboard.set_index("Bowler"), use_container_width=True, column_config=column_configuration)
                     else:
-                        st.info(f"No pacers met the threshold rules of bowling at least {min_balls} balls in this scenario.")
+                        st.info(f"📋 No pacers found matching the minimum requirement threshold of {min_balls} balls bowled.")
                 else:
-                    st.info("No delivery records found matching this filter combo in your data.")
+                    st.info("ℹ️ No delivery metrics recorded in the raw data matching this custom query scenario.")
             else:
                 st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
 
@@ -321,7 +383,7 @@ else:
                         leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
                         leaderboard["Economy"] = leaderboard["Economy"].round(2)
 
-                        if f2 in ["% by Lengths", "Turn Direction"]:
+                        if f2 in ["% by Lengths", "% /Turn (TURN)"]:
                             leaderboard["% Metric"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
                             leaderboard["% Metric"] = leaderboard["% Metric"].round(1)
                             leaderboard = leaderboard.sort_values(by="% Metric", ascending=False).head(10)
@@ -337,8 +399,14 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"Top 10 Spinners Performance vs {filter_label}")
-                        st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
+                        st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2})")
+                        
+                        # Top line KPI Block metrics
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Matching Balls Bowled", int(df_filtered.shape[0]))
+                        m2.metric("Total Wickets Taken", int(df_filtered["Wicket"].sum()))
+                        m3.metric("Unique Spinners Active", int(leaderboard.shape[0]))
+                        st.write("")
 
                         column_configuration = {
                             "Bowler": st.column_config.TextColumn(width=200),
@@ -351,8 +419,8 @@ else:
 
                         st.dataframe(leaderboard.set_index("Bowler"), use_container_width=True, column_config=column_configuration)
                     else:
-                        st.info(f"No spinners met the threshold rules of bowling at least {min_balls} balls in this scenario.")
+                        st.info(f"📋 No spinners found matching the minimum requirement threshold of {min_balls} balls bowled.")
                 else:
-                    st.info("No delivery records found matching this filter combo in your data.")
+                    st.info("ℹ️ No delivery metrics recorded in the raw data matching this custom query scenario.")
             else:
                 st.error("⚠️ Column tracking identifier 'BowlerName' missing in uploaded sheet format structure.")
