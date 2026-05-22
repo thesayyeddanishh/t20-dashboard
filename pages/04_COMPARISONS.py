@@ -171,7 +171,7 @@ else:
                 elif f3 == "LENGTH":
                     df_filtered = df_role_base[(df_role_base["BounceX"] >= 5.8) & (df_role_base["BounceX"] < 8.0)]
                 elif f3 == "SHORT":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 8.0) & (df_role_base["BounceX"] < 10.0)]
+                    df_role_base[(df_role_base["BounceX"] >= 8.0) & (df_role_base["BounceX"] < 10.0)]
                 elif f3 == "BOUNCER":
                     df_filtered = df_role_base[df_role_base["BounceX"] >= 10.0]
                     
