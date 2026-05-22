@@ -165,22 +165,18 @@ else:
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
                     "Select Length", 
-                    ["FULL TOSS", "YORKER", "THE SLOT", "LENGTH", "SHORT", "BOUNCER"]
+                    ["OVERPITCHED", "FULL", "GOOD", "SHORT"]
                 )
                 filter_label = f3
                 
-                if f3 == "FULL TOSS":
-                    df_filtered = df_role_base[df_role_base["BounceX"] < 2.5]
-                elif f3 == "YORKER":
-                    df_filtered = df_role_base[df_role_base["BounceX"] < 2.5]
-                elif f3 == "THE SLOT":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 2.5) & (df_role_base["BounceX"] < 5.8)]
-                elif f3 == "LENGTH":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 5.8) & (df_role_base["BounceX"] < 8.0)]
+                if f3 == "OVERPITCHED":
+                    df_filtered = df_role_base[df_role_base["BounceX"] <= 2.8]
+                elif f3 == "FULL":
+                    df_filtered = df_role_base[(df_role_base["BounceX"] > 2.8) & (df_role_base["BounceX"] <= 4.4)]
+                elif f3 == "GOOD":
+                    df_filtered = df_role_base[(df_role_base["BounceX"] > 4.4) & (df_role_base["BounceX"] <= 6.2)]
                 elif f3 == "SHORT":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 8.0) & (df_role_base["BounceX"] < 10.0)]
-                elif f3 == "BOUNCER":
-                    df_filtered = df_role_base[df_role_base["BounceX"] >= 10.0]
+                    df_filtered = df_role_base[df_role_base["BounceX"] > 6.2]
                     
             elif f2 == "% /Away/No/In (TURN)":
                 f3 = st.selectbox("Select Ball Break Direction", ["Away from Batter", "Into Batter", "No Turn"])
@@ -229,7 +225,7 @@ else:
                     
                     st.dataframe(
                         leaderboard.set_index("Batter"), 
-                        use_container_width=True, # Allow it to flex fully within the 75% boundary row
+                        use_container_width=True, 
                         column_config=column_configuration
                     )
                 else:
@@ -334,7 +330,7 @@ else:
                         leaderboard = leaderboard[final_cols]
                         leaderboard.columns = col_titles
 
-                        st.subheader(f"Top 10 Spinners Performance vs {filter_label}")
+                        st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2})")
                         st.caption(f"**Filters Active:** Phase: {f_overs} | Requirement: Min {min_balls} Balls Bowled")
 
                         column_configuration = {
