@@ -72,7 +72,7 @@ def process_upload(uploaded_file):
 # --- Main App Logic (Single Uploader for Load and Replace) ---
 # =========================================================
 
-st.title("VR Story Finder")
+st.title("VR Story Assistant")
 
 # Use a single file uploader component
 uploaded_file = st.file_uploader(
