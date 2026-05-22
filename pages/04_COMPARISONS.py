@@ -42,43 +42,28 @@ st.markdown(
             justify-content: center !important;
             text-align: center !important;
         }
-        
-        /* Control Panel Sidebar Container - Tighter Height and Padding */
-        div.filter-box {
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 12px;
-            padding: 14px 18px !important; /* Heavily reduced top/bottom padding */
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            margin-top: 0px; 
-        }
-        
-        div.filter-box h3 {
-            margin-bottom: 8px !important;
-            font-size: 1.15rem !important;
-        }
 
-        /* Shrink all Selectboxes, Number Inputs & Labels inside the Config Panel */
-        div.filter-box label p {
+        /* Compact Layout Overrides for the Control Panel Column */
+        div[data-testid="column"]:nth-of-type(2) label p {
             font-size: 0.825rem !important;
             font-weight: 600 !important;
-            margin-bottom: -2px !important; /* Pulls dropdowns closer to their headers */
+            margin-bottom: -2px !important; /* Pulls widgets closer to labels */
         }
         
-        div.filter-box div[data-baseweb="select"] > div {
-            min-height: 32px !important; /* Drastically cuts widget height */
+        div[data-testid="column"]:nth-of-type(2) div[data-baseweb="select"] > div {
+            min-height: 32px !important; /* Keeps dropdown inputs compact */
             height: 32px !important;
             padding-top: 0px !important;
             padding-bottom: 0px !important;
         }
 
-        div.filter-box div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        div[data-testid="column"]:nth-of-type(2) div[data-testid="stNumberInput"] div[data-baseweb="input"] {
             min-height: 32px !important;
             height: 32px !important;
         }
 
-        /* Tighten Streamlit's default vertical item spacing blocks inside the sidebar */
-        div.filter-box div[data-testid="stVerticalBlock"] > div {
+        /* Tighten default vertical element spacing gaps in the controls layout */
+        div[data-testid="column"]:nth-of-type(2) div[data-testid="stVerticalBlock"] > div {
             gap: 0.4rem !important; 
         }
         
@@ -129,13 +114,7 @@ else:
     # STEP 2: RENDER CONTROLS IN THE RIGHT FILTER PANEL (SIDEBAR LOOK)
     # ==================================================================
     with filter_panel_col:
-        st.markdown(
-            """
-            <div class="filter-box">
-                <h3>Config Panel</h3>
-            """, 
-            unsafe_allow_html=True
-        )
+        st.subheader("⚙️ Control Panel")
         
         # Filter 1: Player Role Selection
         f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
@@ -262,8 +241,6 @@ else:
                     df_filtered = df_role_base[df_role_base["Deviation"] > 0.1]
 
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
-            
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # ==================================================================
     # STEP 3: EXECUTE CALCULATIONS & RENDER LEADERBOARDS ON LEFT SIDE
