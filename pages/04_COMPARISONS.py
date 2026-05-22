@@ -43,14 +43,43 @@ st.markdown(
             text-align: center !important;
         }
         
-        /* Control Panel Sidebar Container */
+        /* Control Panel Sidebar Container - Tighter Height and Padding */
         div.filter-box {
             background-color: #F8FAFC;
             border: 1px solid #E2E8F0;
             border-radius: 12px;
-            padding: 24px;
+            padding: 14px 18px !important; /* Heavily reduced top/bottom padding */
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-top: 0px; 
+        }
+        
+        div.filter-box h3 {
+            margin-bottom: 8px !important;
+            font-size: 1.15rem !important;
+        }
+
+        /* Shrink all Selectboxes, Number Inputs & Labels inside the Config Panel */
+        div.filter-box label p {
+            font-size: 0.825rem !important;
+            font-weight: 600 !important;
+            margin-bottom: -2px !important; /* Pulls dropdowns closer to their headers */
+        }
+        
+        div.filter-box div[data-baseweb="select"] > div {
+            min-height: 32px !important; /* Drastically cuts widget height */
+            height: 32px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+        }
+
+        div.filter-box div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+            min-height: 32px !important;
+            height: 32px !important;
+        }
+
+        /* Tighten Streamlit's default vertical item spacing blocks inside the sidebar */
+        div.filter-box div[data-testid="stVerticalBlock"] > div {
+            gap: 0.4rem !important; 
         }
         
         /* Subtitle formatting for active filters */
@@ -100,8 +129,6 @@ else:
     # STEP 2: RENDER CONTROLS IN THE RIGHT FILTER PANEL (SIDEBAR LOOK)
     # ==================================================================
     with filter_panel_col:
-        # Wrap everything in a nice styled container box
-        # Replacing st.subheader with raw markdown keeps the blank spacer box from appearing
         st.markdown(
             """
             <div class="filter-box">
@@ -112,11 +139,9 @@ else:
         
         # Filter 1: Player Role Selection
         f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
-        st.write("") # subtle spacing
         
         # Shared Filter 2: Match Phase Filter (Overs)
         f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
-        st.write("")
 
         # Apply global Match Phase Filtering to df_raw
         if "Over" in df_raw.columns:
@@ -130,7 +155,6 @@ else:
         # Conditional Filters based on Selected Role
         if f1 == "BATTERS":
             f2 = st.selectbox("SR by Length / Pace", ["LENGTH", "PACE"])
-            st.write("")
             
             if f2 == "LENGTH":
                 f3 = st.selectbox(
@@ -161,7 +185,6 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
 
-            st.write("")
             min_balls = st.number_input("Minimum balls faced", min_value=1, value=10, step=1)
 
         elif f1 == "PACERS":
@@ -171,7 +194,6 @@ else:
                 "View Type", 
                 ["Economy By Length", "% by Lengths", "Economy by Pace", "% Balls by Pace"]
             )
-            st.write("")
             
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
@@ -202,7 +224,6 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_role_base[df_role_base["ReleaseSpeed"] < 125]
 
-            st.write("")
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
         elif f1 == "SPINNERS":
@@ -212,7 +233,6 @@ else:
                 "View Type", 
                 ["Economy By Length", "% by Lengths", "% /Turn (TURN)"]
             )
-            st.write("")
             
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
@@ -241,7 +261,6 @@ else:
                 elif f3 == "Turn Right":
                     df_filtered = df_role_base[df_role_base["Deviation"] > 0.1]
 
-            st.write("")
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
             
         st.markdown('</div>', unsafe_allow_html=True)
