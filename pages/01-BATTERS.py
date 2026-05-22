@@ -1100,28 +1100,25 @@ else:
 with filter_col2:
     batsman = st.selectbox("Batsman Name", batsmen_options, index=0)
 
-# 3. Innings Filter (in column 3)
-# Check if 'Innings' column exists before creating options (Robustness)
-if "Innings" in df_raw.columns:
-    innings_options = ["All"] + sorted(df_raw["Innings"].dropna().unique().tolist())
+# 3. Year Filter (in column 3)
+if "Year" in df_raw.columns:
+    year_options = ["All"] + sorted(df_raw["Year"].dropna().unique().astype(int).astype(str).tolist())
     with filter_col3:
-        selected_innings = st.selectbox("Innings", innings_options, index=0)
+        selected_year = st.selectbox("Year", year_options, index=0)
 else:
-    selected_innings = "All" # Default if column is missing
+    selected_year = "All"
     with filter_col3:
-        st.info("Innings filter unavailable.")
+        st.info("Year filter unavailable.")
 
-# 4. Bowler Hand Filter (in column 4)
-# Check if 'IsBowlerRightHanded' column exists (CRITICAL FIX)
-if "IsBowlerRightHanded" in df_raw.columns:
-    bowler_hand_options = ["All", "Right Hand", "Left Hand"]
+# 4. Venue Filter (in column 4)
+if "Ground" in df_raw.columns:
+    venue_options = ["All"] + sorted(df_raw["Ground"].dropna().unique().tolist())
     with filter_col4:
-        selected_bowler_hand = st.selectbox("Bowler Hand", bowler_hand_options, index=0)
+        selected_venue = st.selectbox("Venue", venue_options, index=0)
 else:
-    selected_bowler_hand = "All" # Default if column is missing
+    selected_venue = "All"
     with filter_col4:
-        st.info("Bowler Hand filter unavailable.")
-    
+        st.info("Venue filter unavailable.")    
 # =========================================================
 
 # --- Apply Filters to the Raw dataframes ---
@@ -1135,15 +1132,13 @@ def apply_filters(df):
     if batsman != "All":
         df_filtered = df_filtered[df_filtered["BatsmanName"] == batsman]
         
-    # Apply Innings Filter (Only if column exists)
-    if selected_innings != "All" and "Innings" in df_filtered.columns:
-        df_filtered = df_filtered[df_filtered["Innings"] == selected_innings]
+    # Apply Year Filter (Only if column exists)
+    if selected_year != "All" and "Year" in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered["Year"].astype(int) == int(selected_year)]
         
-    # Apply Bowler Hand Filter (Only if column exists)
-    if selected_bowler_hand != "All" and "IsBowlerRightHanded" in df_filtered.columns:
-        # True for Right Hand, False for Left Hand
-        is_right = (selected_bowler_hand == "Right Hand") 
-        df_filtered = df_filtered[df_filtered["IsBowlerRightHanded"] == is_right]
+    # Apply Venue Filter (Only if column exists)
+    if selected_venue != "All" and "Ground" in df_filtered.columns:
+        df_filtered = df_filtered[df_filtered["Ground"] == selected_venue]
         
     return df_filtered
 
