@@ -28,7 +28,7 @@ else:
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        f1 = st.selectbox("Category (FILTER 1)", ["BATTERS", "PACERS", "SPINNERS"])
+        f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
     
     # Objects to hold our conditional data slice
     df_filtered = pd.DataFrame()
@@ -40,19 +40,19 @@ else:
     if f1 == "BATTERS":
         
         with col2:
-            f2 = st.selectbox("View Type (FILTER 2)", ["LENGTH", "PACE"])
+            f2 = st.selectbox("SR by Length / Pace", ["LENGTH", "PACE"])
         
         with col3:
             if f2 == "LENGTH":
                 f3 = st.selectbox(
-                    "Length (FILTER 3)", 
+                    "Select Length", 
                     ["FULL TOSS", "YORKER", "THE SLOT", "LENGTH", "SHORT", "BOUNCER"]
                 )
                 filter_label = f3
                 
                 # Map selection to your pitch data ranges (BounceX)
                 if f3 == "FULL TOSS":
-                    df_filtered = df_raw[df_raw["BounceX"]<0.5]
+                    df_filtered = df_raw[df_raw["BounceX"] < 0.5]
                 elif f3 == "YORKER":
                     df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "THE SLOT":
@@ -65,7 +65,7 @@ else:
                     df_filtered = df_raw[df_raw["BounceX"] >= 10.0]
 
             elif f2 == "PACE":
-                f3 = st.selectbox("Pace (FILTER 3)", ["Above 140", "Below 125"])
+                f3 = st.selectbox("Select Pace", ["Above 140", "Below 125"])
                 filter_label = f"Pace ({f3} kph)"
                 
                 if f3 == "Above 140":
@@ -74,7 +74,7 @@ else:
                     df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
 
         with col4:
-            min_balls = st.number_input("Min Balls Criteria", min_value=1, value=10, step=1)
+            min_balls = st.number_input("Minimum balls faced", min_value=1, value=10, step=1)
 
         # --- GENERATE DATA TABLE LEADERBOARD ---
         if not df_filtered.empty:
@@ -100,10 +100,24 @@ else:
                 leaderboard["Runs"] = leaderboard["Runs"].astype(int)
                 
                 # Assign precise column titles requested
-                leaderboard.columns = ["Batter Name", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
+                leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
                 
-                st.subheader(f"📊 Top 10 Batters vs {filter_label} (Min {min_balls} Balls)")
-                st.dataframe(leaderboard.set_index("Batter Name"), use_container_width=True)
+                st.subheader(f"Top 10 Batters by Strike Rate  vs {filter_label} (Min {min_balls} Balls)")
+                
+                # --- CENTER ALIGNMENT CONFIGURATION ---
+                # Configuring text alignment to center for columns explicitly
+                column_configuration = {
+                    "Runs": st.column_config.NumberColumn(alignment="center"),
+                    "Balls faced": st.column_config.NumberColumn(alignment="center"),
+                    "Dismissals": st.column_config.NumberColumn(alignment="center"),
+                    "Strike Rate": st.column_config.NumberColumn(alignment="center"),
+                }
+                
+                st.dataframe(
+                    leaderboard.set_index("Batter"), 
+                    use_container_width=True,
+                    column_config=column_configuration
+                )
             else:
                 st.info(f"No batters met the threshold rules of facing at least {min_balls} balls in this selection.")
         else:
