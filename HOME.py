@@ -13,7 +13,7 @@ REQUIRED_COLS = [
 st.set_page_config(
     layout="wide", 
     page_title="VR Story Assistant",
-    page_icon="hei.png"
+    page_icon="heio.png"
 )
 
 # --- Custom CSS for Sidebar Width (200px) ---
