@@ -353,7 +353,7 @@ else:
                     leaderboard = leaderboard[final_cols]
                     leaderboard.columns = col_titles
 
-                    st.subheader(f"📊 Top 10 Spinners Performance vs {filter_label} ({f2}) | Phase: {f_overs}")
+                    st.subheader(f"Top 10 Spinners Performance vs {filter_label}")
 
                     column_configuration = {
                         "Bowler": st.column_config.TextColumn(width=200),
