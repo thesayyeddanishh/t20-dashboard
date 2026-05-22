@@ -9,24 +9,17 @@ st.set_page_config(layout="wide")
 st.markdown(
     """
     <style>
-        /* Global Header Typography Changes */
+        /* Global Header Typography Changes - Safe Layout */
         h1 {
             font-weight: 800 !important;
             color: #1E293B !important;
             letter-spacing: -0.5px;
-            margin-top: 0px !important; /* Safe positioning to prevent cutting in half */
-            margin-bottom: 10px !important;
-            padding-top: 0px !important;
+            margin: 0px !important;
+            padding: 0px !important;
         }
         h2, h3 {
             font-weight: 700 !important;
             color: #334155 !important;
-        }
-        
-        /* Pull the entire main container up cleanly */
-        .block-container {
-            padding-top: 1.5rem !important; /* Shrinks the top blank space safely */
-            padding-bottom: 1rem !important;
         }
         
         /* Table Styling Overrides */
@@ -54,13 +47,12 @@ st.markdown(
             border-radius: 12px;
             padding: 24px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            margin-top: 0px; /* Aligns smoothly with the top of the table */
+            margin-top: 0px; 
         }
     </style>
     """,
     unsafe_allow_html=True
-)
-# Header Section
+)# Header Section
 st.title("Player Performance Comparison")
 st.write("---")
 
