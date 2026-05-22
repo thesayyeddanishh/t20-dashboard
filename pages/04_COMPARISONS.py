@@ -40,13 +40,18 @@ else:
     df_raw["BounceX"] = pd.to_numeric(df_raw["BounceX"], errors="coerce")
     df_raw["Wicket"] = df_raw["Wicket"].astype(bool)
     df_raw["Runs"] = pd.to_numeric(df_raw["Runs"], errors="coerce").fillna(0)
+    
+    # Ensure Over column is parsed cleanly as numbers for matching boundary rules
+    if "Over" in df_raw.columns:
+        df_raw["Over"] = pd.to_numeric(df_raw["Over"], errors="coerce")
 
     # ------------------------------------------------------------------
-    # --- DYNAMIC HORIZONTAL FILTER ROW ---
+    # --- DYNAMIC HORIZONTAL FILTER LAYOUT ---
     # ------------------------------------------------------------------
-    col1, col2, col3, col4 = st.columns(4)
+    # Row 1: Core category and view parameters
+    row1_col1, row1_col2, row1_col3 = st.columns(3)
 
-    with col1:
+    with row1_col1:
         f1 = st.selectbox("Select Player Role", ["BATTERS", "PACERS", "SPINNERS"])
     
     # Objects to hold our conditional data slice
@@ -57,11 +62,10 @@ else:
     # BRANCH 1: BATTERS SELECTION
     # ==================================================================
     if f1 == "BATTERS":
-        
-        with col2:
+        with row1_col2:
             f2 = st.selectbox("SR by Length / Pace", ["LENGTH", "PACE"])
         
-        with col3:
+        with row1_col3:
             if f2 == "LENGTH":
                 f3 = st.selectbox(
                     "Select Length", 
@@ -69,7 +73,6 @@ else:
                 )
                 filter_label = f3
                 
-                # Map selection to your pitch data ranges (BounceX)
                 if f3 == "FULL TOSS":
                     df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "YORKER":
@@ -92,10 +95,12 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_raw[df_raw["ReleaseSpeed"] < 125]
 
-        with col4:
+        # Row 2: Secondary Threshold inputs
+        row2_col1, row2_col2 = st.columns([1, 2])
+        with row2_col1:
             min_balls = st.number_input("Minimum balls faced", min_value=1, value=10, step=1)
 
-        # --- GENERATE DATA TABLE LEADERBOARD ---
+        # --- GENERATE BATTERS DATA TABLE LEADERBOARD ---
         if not df_filtered.empty:
             batter_col = "Batter" if "Batter" in df_filtered.columns else "BatsmanName"
             
@@ -143,13 +148,13 @@ else:
         # Global filter restriction for Pacers
         df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "seam"] if "DeliveryType" in df_raw.columns else df_raw.copy()
         
-        with col2:
+        with row1_col2:
             f2 = st.selectbox(
                 "View Type", 
                 ["Economy By Length", "% by Lengths", "Economy by Pace", "% Balls by Pace"]
             )
         
-        with col3:
+        with row1_col3:
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
                     "Select Length", 
@@ -179,11 +184,34 @@ else:
                 elif f3 == "Below 125":
                     df_filtered = df_role_base[df_role_base["ReleaseSpeed"] < 125]
 
-        with col4:
+        # Row 2: Secondary situational constraints and volume limits
+        row2_col1, row2_col2 = st.columns(2)
+        
+        with row2_col1:
+            f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
+        
+        with row2_col2:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
+
+        # Apply the selected match phase filter to both our baseline database and contextual slice
+        if "Over" in df_raw.columns:
+            if f_overs == "Powerplay (1-6)":
+                # Over index matching handles raw database rules (0.1 to 5.6 is under 6)
+                df_role_base = df_role_base[df_role_base["Over"] < 6]
+                if not df_filtered.empty:
+                    df_filtered = df_filtered[df_filtered["Over"] < 6]
+            elif f_overs == "Middle (7-16)":
+                df_role_base = df_role_base[(df_role_base["Over"] >= 6) & (df_role_base["Over"] < 16)]
+                if not df_filtered.empty:
+                    df_filtered = df_filtered[(df_filtered["Over"] >= 6) & (df_filtered["Over"] < 16)]
+            elif f_overs == "Death (17-20)":
+                df_role_base = df_role_base[df_role_base["Over"] >= 16]
+                if not df_filtered.empty:
+                    df_filtered = df_filtered[df_filtered["Over"] >= 16]
 
         # --- PACERS COMPUTATION ENGINE ---
         if "BowlerName" in df_raw.columns:
+            # Denominator tracks legal active deliveries for the selected context
             df_bowler_totals = df_role_base.groupby("BowlerName").agg(
                 Total_Balls=("Runs", "count")
             ).reset_index()
@@ -202,7 +230,6 @@ else:
                     leaderboard["Economy"] = (leaderboard["Runs_Conceded"] / leaderboard["Balls_Bowled"]) * 6
                     leaderboard["Economy"] = leaderboard["Economy"].round(2)
 
-                    # Manage display formatting states depending on requested view context mappings
                     if f2 == "% by Lengths":
                         leaderboard["% of Length"] = (leaderboard["Balls_Bowled"] / leaderboard["Total_Balls"]) * 100
                         leaderboard["% of Length"] = leaderboard["% of Length"].round(1)
@@ -231,7 +258,8 @@ else:
                     leaderboard = leaderboard[final_cols]
                     leaderboard.columns = col_titles
 
-                    st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2})")
+                    # Clean descriptive table subheader capturing all filters
+                    st.subheader(f"📊 Top 10 Pacers' Performance vs {filter_label} ({f2}) | Phase: {f_overs}")
 
                     column_configuration = {
                         "Bowler": st.column_config.TextColumn(width=200),
@@ -261,13 +289,13 @@ else:
         # Global filter restriction for Spinners
         df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "spin"] if "DeliveryType" in df_raw.columns else df_raw.copy()
         
-        with col2:
+        with row1_col2:
             f2 = st.selectbox(
                 "View Type", 
                 ["Economy By Length", "% by Lengths", "% /Away/No/In (TURN)"]
             )
         
-        with col3:
+        with row1_col3:
             if f2 in ["Economy By Length", "% by Lengths"]:
                 f3 = st.selectbox(
                     "Select Length", 
@@ -293,7 +321,11 @@ else:
                 filter_label = f3
                 df_filtered = df_role_base.copy()
 
-        with col4:
+        # Row 2: Secondary selectors
+        row2_col1, row2_col2 = st.columns(2)
+        with row2_col1:
+            st.empty() # Visual balance structure placeholder
+        with row2_col2:
             min_balls = st.number_input("Minimum balls bowled", min_value=1, value=10, step=1)
 
         # --- SPINNERS COMPUTATION ENGINE ---
