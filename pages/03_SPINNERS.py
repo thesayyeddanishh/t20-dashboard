@@ -974,12 +974,30 @@ with filter_col2:
     bowler = st.selectbox("Bowler Name", relative_bowlers, index=0)
 
 # --- Render Inningss Filter (Col 3) ---
-Innings_options = ["All"]
-if "Innings" in df_spin_base.columns:
-    valid_Inningss = df_spin_base["Innings"].dropna().astype(int).unique()
-    Innings_options.extend(sorted([str(i) for i in valid_Inningss]))
-with filter_col3:
-    selected_Innings = st.selectbox("Innings", Innings_options, index=0)
+# Find the actual year column case-insensitively
+year_col = next((c for c in df_raw.columns if c.strip().lower() == 'year'), None)
+# Find the actual ground column case-insensitively
+ground_col = next((c for c in df_raw.columns if c.strip().lower() == 'ground'), None)
+
+# 3. Year Filter (in column 3)
+if year_col:
+    year_options = ["All"] + sorted(df_raw[year_col].dropna().unique().astype(int).astype(str).tolist())
+    with filter_col3:
+        selected_year = st.selectbox("Year", year_options, index=0)
+else:
+    selected_year = "All"
+    with filter_col3:
+        st.info("Year filter unavailable.")
+
+# 4. Venue Filter (in column 4)
+if ground_col:
+    venue_options = ["All"] + sorted(df_raw[ground_col].dropna().unique().tolist())
+    with filter_col4:
+        selected_venue = st.selectbox("Venue", venue_options, index=0)
+else:
+    selected_venue = "All"
+    with filter_col4:
+        st.info("Venue filter unavailable.")
 
 st.header(f"{bowler}")
 
@@ -997,10 +1015,16 @@ if bowler != "All":
     else:
         st.warning("BowlerName column not found for filtering.")
 
-# Apply Innings Filter
-if selected_Innings != "All" and "Innings" in df_filtered.columns:
-    Innings_int = int(selected_Innings)
-    df_filtered = df_filtered[df_filtered["Innings"] == Innings_int]
+# Apply Year Filter cleanly matching the found column name
+    actual_year_col = next((c for c in df_filtered.columns if c.strip().lower() == 'year'), None)
+    if selected_year != "All" and actual_year_col:
+        df_filtered = df_filtered[df_filtered[actual_year_col].astype(int) == int(selected_year)]
+        
+# Apply Venue Filter cleanly matching the found column name
+    actual_ground_col = next((c for c in df_filtered.columns if c.strip().lower() == 'ground'), None)
+    if selected_venue != "All" and actual_ground_col:
+        df_filtered = df_filtered[df_filtered[actual_ground_col] == selected_venue]
+
 
 # =========================================================
 # 5. SPLIT AND DISPLAY CHARTS (RHB vs LHB) 🏏
