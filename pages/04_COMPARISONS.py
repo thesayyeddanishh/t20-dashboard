@@ -104,20 +104,26 @@ else:
                 
                 st.subheader(f"Top 10 Batters by Strike Rate  vs {filter_label} (Min {min_balls} Balls)")
                 
-                # --- CENTER ALIGNMENT CONFIGURATION ---
-                # Configuring text alignment to center for columns explicitly
+                # --- EXPLICIT COLUMN & HEADER CONFIGURATION ---
+                # Setting alignment to center dynamically enforces headers to align too.
+                # Setting width (in pixels) forces the table to shrink away from the full layout width.
                 column_configuration = {
-                    "Runs": st.column_config.NumberColumn(alignment="center"),
-                    "Balls faced": st.column_config.NumberColumn(alignment="center"),
-                    "Dismissals": st.column_config.NumberColumn(alignment="center"),
-                    "Strike Rate": st.column_config.NumberColumn(alignment="center"),
+                    "Batter": st.column_config.TextColumn(width=180),
+                    "Runs": st.column_config.NumberColumn(alignment="center", width=100),
+                    "Balls faced": st.column_config.NumberColumn(alignment="center", width=110),
+                    "Dismissals": st.column_config.NumberColumn(alignment="center", width=110),
+                    "Strike Rate": st.column_config.NumberColumn(alignment="center", width=120),
                 }
                 
-                st.dataframe(
-                    leaderboard.set_index("Batter"), 
-                    use_container_width=True,
-                    column_config=column_configuration
-                )
+                # Render using an isolated layout container grid
+                layout_left, layout_right = st.columns([1, 1])
+                
+                with layout_left:
+                    st.dataframe(
+                        leaderboard.set_index("Batter"), 
+                        use_container_width=False, # Disable stretching behavior
+                        column_config=column_configuration
+                    )
             else:
                 st.info(f"No batters met the threshold rules of facing at least {min_balls} balls in this selection.")
         else:
