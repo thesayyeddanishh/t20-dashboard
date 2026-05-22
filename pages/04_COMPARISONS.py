@@ -135,7 +135,7 @@ else:
                 leaderboard.columns = ["Batter", "Runs", "Balls faced", "Dismissals", "Strike Rate"]
                 
                 st.subheader(f"Top 10 Batters by Strike Rate vs {filter_label} (Min {min_balls} Balls))
-                
+             
                 column_configuration = {
                     "Batter": st.column_config.TextColumn(width=200),
                     "Runs": st.column_config.NumberColumn(alignment="center", width=75),
