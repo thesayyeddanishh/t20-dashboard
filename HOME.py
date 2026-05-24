@@ -74,11 +74,23 @@ def process_upload(uploaded_file):
 
 st.title("VR Story Assistant")
 
-# Use a single file uploader component
+# Add the requirement notice using an expander for a clean look
+with st.expander("ℹ️ Click here to see required CSV columns"):
+    st.markdown("""
+    Please ensure your CSV file includes the following columns:
+    
+    * **General:** `Day`, `Innings`, `Over`, `Ball`, `BowlerName`, `BatsmanName`, `BowlingTeam`, `BattingTeam`
+    * **Handedness:** `IsBowlerRightHanded`, `IsBatsmanRightHanded`
+    * **Results:** `Wicket`, `Runs`
+    * **Coordinates:** `Bounce X Y`, `Interception X Y Z`, `Crease X Y Z`, `Stumps X Y Z`, `Release X Y Z`, `Landing X Y Z`
+    * **Delivery Specs:** `ReleaseSpeed`, `Deviation`, `DeliveryType`, `Swing`
+    * **Match Info:** `Ground`, `Tour`, `Year`, `Match`
+    """)
+
+# Now the uploader follows immediately
 uploaded_file = st.file_uploader(
     "Upload your CSV file here", 
     type=["csv"],
-    # The default text is "Browse files" or "Drop file here". Streamlit handles this text.
     key="main_uploader" 
 )
 
