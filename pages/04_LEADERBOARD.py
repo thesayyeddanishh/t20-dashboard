@@ -145,7 +145,7 @@ else:
                 elif f3 == "FULL TOSS":
                     df_filtered = df_raw[df_raw["BounceX"] <= 0.5]
                 elif f3 == "YORKER":
-                    df_filtered = df_raw[df_raw["BounceX"] <= 2.5]
+                    df_filtered = df_raw[(df_raw["BounceX"] > 0.5) & (df_raw["BounceX"] <= 2.5)]
                 elif f3 == "THE SLOT":
                     df_filtered = df_raw[(df_raw["BounceX"] > 2.5) & (df_raw["BounceX"] <= 5.8)]
                 elif f3 == "LENGTH":
@@ -188,7 +188,7 @@ else:
                 if f3 == "FULL TOSS":
                     df_filtered = df_role_base[df_role_base["BounceX"] <= 0.5]
                 elif f3 == "YORKER":
-                    df_filtered = df_role_base[df_role_base["BounceX"] <= 2.5]
+                    df_filtered = df_role_base[(df_role_base["BounceX"] > 0.5) & (df_role_base["BounceX"] <= 2.5)]
                 elif f3 == "THE SLOT":
                     df_filtered = df_role_base[(df_role_base["BounceX"] > 2.5) & (df_role_base["BounceX"] <= 5.8)]
                 elif f3 == "LENGTH":
