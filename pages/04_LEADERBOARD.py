@@ -186,7 +186,7 @@ else:
                 filter_label = f3
                 
                 if f3 == "FULL TOSS":
-                    df_filtered = df_role_base[df_role_base["BounceX"] < 2.5]
+                    df_filtered = df_role_base[df_role_base["BounceX"] < 0.5]
                 elif f3 == "YORKER":
                     df_filtered = df_role_base[df_role_base["BounceX"] < 2.5]
                 elif f3 == "THE SLOT":
