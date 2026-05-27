@@ -130,7 +130,7 @@ else:
 
         # Conditional Filters based on Selected Role
         if f1 == "BATTERS":
-            df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "seam"] if "DeliveryType" in df_raw.columns else df_raw.copy()
+            # df_role_base = df_raw[df_raw["DeliveryType"].str.lower() == "seam"] if "DeliveryType" in df_raw.columns else df_raw.copy()
             f2 = st.selectbox("SR by Length / Pace", ["LENGTH", "PACE"])
             
             if f2 == "LENGTH":
@@ -143,6 +143,7 @@ else:
                 
                 if f3 == "All":
                     df_filtered = df_raw.copy()
+                    df_filtered = df_filtered[df_filtered["DeliveryType"] == "Seam"]
                 elif f3 == "FULL TOSS":
                     df_filtered = df_raw[df_raw["BounceX"] < 0.5]
                 elif f3 == "YORKER":
