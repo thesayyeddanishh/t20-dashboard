@@ -268,7 +268,7 @@ else:
                 
                 leaderboard["Strike Rate"] = (leaderboard["Runs"] / leaderboard["Balls_Faced"]) * 100
                 
-               ## leaderboard = leaderboard[leaderboard["Balls_Faced"] >= min_balls]
+                leaderboard[leaderboard["Balls_Faced"] >= min_balls]
 
                 if not leaderboard.empty:
                     leaderboard = leaderboard.sort_values(by="Strike Rate", ascending=False).head(10)
