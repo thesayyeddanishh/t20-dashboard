@@ -446,10 +446,10 @@ else:
 
         st.write("---")
         with st.expander("🔍 View Raw Data (Verified Source)"):
-        st.write("Current dataset after all filters are applied:")
-        st.dataframe(df_filtered, use_container_width=True)
+            st.write("Current dataset after all filters are applied:")
+            st.dataframe(df_filtered, use_container_width=True)
         
         # Quick verification stats to help debug your calculation issues
-        col1, col2 = st.columns(2)
-        col1.metric("Total Rows", len(df_filtered))
-        col2.metric("Total Runs", df_filtered['Runs'].sum())
+            col1, col2 = st.columns(2)
+            col1.metric("Total Rows", len(df_filtered))
+            col2.metric("Total Runs", df_filtered['Runs'].sum())
