@@ -224,7 +224,7 @@ def get_pitch_bins(delivery_type):
     if delivery_type == "Seam":
         # Seam Bins: 1.2-6: Full, 6-8 Length, 8-10 Short, 10-15 Bouncer
         return {
-            "Full Toss": [-20, 0.5],
+            "Full Toss": [-4, 0.5],
             "Yorker": [0.5,2.5],
             "The Slot": [2.5, 5.8],
             "Length": [5.8, 8],
@@ -365,7 +365,7 @@ def create_pitch_Length_bars(df_in, delivery_type):
         if delivery_type == "Seam":
             # Seam Bins: 1.2-6: Full, 6-8 Length, 8-10 Short, 10-15 Bouncer
             return {
-                "Full Toss": [-20, 0.5],
+                "Full Toss": [-4, 0.5],
                 "Yorker": [0.5,2.5],
                  "The Slot": [2.5, 5.8],
                 "Length": [5.8, 8],
