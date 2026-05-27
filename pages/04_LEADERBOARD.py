@@ -143,7 +143,7 @@ else:
                 if f3 == "All":
                     df_filtered = df_raw.copy()
                 elif f3 == "FULL TOSS":
-                    df_filtered = df_raw[df_raw["BounceX"] < 2.5]
+                    df_filtered = df_raw[df_raw["BounceX"] < 0.5]
                 elif f3 == "YORKER":
                     df_filtered = df_raw[df_raw["BounceX"] < 2.5]
                 elif f3 == "THE SLOT":
