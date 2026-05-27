@@ -143,7 +143,7 @@ def create_pacer_pitch_length_bars(df_in):
 
     # Get the pitch bins and define order (Fixed for Pacer)
     PITCH_BINS_DICT = get_pacer_pitch_bins()
-    ordered_keys = ["Full Toss", "Yorker","Slot", "Length", "Short"]
+    ordered_keys = ["Full Toss", "Yorker","The Slot", "Length", "Short", "Bouncer"]
     
     # 1. Data Preparation
     def assign_pitch_length(x):
