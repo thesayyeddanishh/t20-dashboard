@@ -266,7 +266,7 @@ else:
                     Dismissals=("Wicket", lambda x: sorted(x).count(True))
                 ).reset_index()
                 
-                leaderboard[leaderboard["Balls_Faced"] >= min_balls]
+                leaderboard = leaderboard[leaderboard["Balls_Faced"] >= min_balls]
 
                 if not leaderboard.empty:
                     leaderboard["Strike Rate"] = (leaderboard["Runs"] / leaderboard["Balls_Faced"]) * 100
