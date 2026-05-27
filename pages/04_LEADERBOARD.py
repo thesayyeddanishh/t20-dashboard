@@ -265,11 +265,12 @@ else:
                     Balls_Faced=("Wicket", "count"),
                     Dismissals=("Wicket", lambda x: sorted(x).count(True))
                 ).reset_index()
-
+                
+                leaderboard["Strike Rate"] = (leaderboard["Runs"] / leaderboard["Balls_Faced"]) * 100
+                
                 leaderboard = leaderboard[leaderboard["Balls_Faced"] >= min_balls]
 
                 if not leaderboard.empty:
-                    leaderboard["Strike Rate"] = (leaderboard["Runs"] / leaderboard["Balls_Faced"]) * 100
                     leaderboard = leaderboard.sort_values(by="Strike Rate", ascending=False).head(10)
                     
                     leaderboard["Strike Rate"] = leaderboard["Strike Rate"].round(1)
