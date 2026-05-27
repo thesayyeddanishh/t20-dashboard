@@ -119,20 +119,20 @@ else:
         # Shared Filter 2: Match Phase Filter (Overs) - Defaults to "All"
         f_overs = st.selectbox("Match Phase (Overs)", ["All", "Powerplay (1-6)", "Middle (7-16)", "Death (17-20)"])
 
-        # # --- INSERT NEW FILTERS HERE ---
-        # st.write("---")
-        # all_batsmen = sorted(df_raw["BatsmanName"].unique().tolist()) if "BatsmanName" in df_raw.columns else []
-        # selected_batsmen = st.multiselect("Filter by Batsman", all_batsmen)
+        # --- INSERT NEW FILTERS HERE ---
+        st.write("---")
+        all_batsmen = sorted(df_raw["BatsmanName"].unique().tolist()) if "BatsmanName" in df_raw.columns else []
+        selected_batsmen = st.multiselect("Filter by Batsman", all_batsmen)
         
-        # all_types = ["All"] + df_raw["DeliveryType"].unique().tolist() if "DeliveryType" in df_raw.columns else ["All"]
-        # selected_type = st.selectbox("Filter by Delivery Type", all_types)
+        all_types = ["All"] + df_raw["DeliveryType"].unique().tolist() if "DeliveryType" in df_raw.columns else ["All"]
+        selected_type = st.selectbox("Filter by Delivery Type", all_types)
         
-        # # Apply these to df_raw so subsequent logic uses the correct subset
-        # if selected_batsmen:
-        #     df_raw = df_raw[df_raw["BatsmanName"].isin(selected_batsmen)]
-        # if selected_type != "All":
-        #     df_raw = df_raw[df_raw["DeliveryType"] == selected_type]
-        # # --- END OF INSERT ---
+        # Apply these to df_raw so subsequent logic uses the correct subset
+        if selected_batsmen:
+            df_raw = df_raw[df_raw["BatsmanName"].isin(selected_batsmen)]
+        if selected_type != "All":
+            df_raw = df_raw[df_raw["DeliveryType"] == selected_type]
+        # --- END OF INSERT ---
 
         # Apply global Match Phase Filtering to df_raw
         if "Over" in df_raw.columns:
