@@ -19,7 +19,7 @@ def create_pacer_pitch_map(df_in):
     PITCH_BINS = {
            "Full Toss": [-5, 0.5],
             "Yorker": [0.5,2.5],
-            "Slot": [2.5, 5.8],
+            "The Slot": [2.5, 5.8],
             "Length": [5.8, 8],
             "Short": [8, 10],
             "Bouncer": [10, 15]
@@ -126,7 +126,7 @@ def get_pacer_pitch_bins():
     return {
            "Full Toss": [-5, 0.5],
             "Yorker": [0.5,2.5],
-            "Slot": [2.5, 5.8],
+            "The Slot": [2.5, 5.8],
             "Length": [5.8, 8],
             "Short": [8, 10],
             "Bouncer": [10, 15]
