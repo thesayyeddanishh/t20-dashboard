@@ -224,11 +224,12 @@ def get_pitch_bins(delivery_type):
     if delivery_type == "Seam":
         # Seam Bins: 1.2-6: Full, 6-8 Length, 8-10 Short, 10-15 Bouncer
         return {
-            "Full Toss": [-2, 0.9],
-            "Yorker": [0.9,2.8],
-            "Slot": [2.8, 5.9],
-            "Length": [5.9, 8.6],
-            "Short": [8.6, 15]
+            "Full Toss": [-20, 0.5],
+            "Yorker": [0.5,2.5],
+            "The Slot": [2.5, 5.8],
+            "Length": [5.8, 8],
+            "Short": [8, 10],
+            "Bouncer": [10, 16]
         }
     elif delivery_type == "Spin":
         # Spin Bins: 1.22-2.22: OP, 2.22-4: full, 4-6: Good, 6-15: short
@@ -364,11 +365,12 @@ def create_pitch_Length_bars(df_in, delivery_type):
         if delivery_type == "Seam":
             # Seam Bins: 1.2-6: Full, 6-8 Length, 8-10 Short, 10-15 Bouncer
             return {
-                "Full Toss": [-2, 0.9],
-                "Yorker": [0.9,2.8],
-                 "Slot": [2.8, 5.9],
-                "Length": [5.9, 8.6],
-                "Short": [8.6, 15]
+                "Full Toss": [-20, 0.5],
+                "Yorker": [0.5,2.5],
+                 "The Slot": [2.5, 5.8],
+                "Length": [5.8, 8],
+                "Short": [8, 10],
+                "Bouncer": [10, 16]
             }
         elif delivery_type == "Spin":
             # Spin Bins: 1.22-2.22: OP, 2.22-4: full, 4-6: Good, 6-15: short
@@ -382,7 +384,7 @@ def create_pitch_Length_bars(df_in, delivery_type):
     PITCH_BINS_DICT = get_pitch_bins(delivery_type)
     
     if delivery_type == "Seam":
-        ordered_keys = ["Full Toss","Yorker", "Slot", "Length", "Short" ]
+        ordered_keys = ["Full Toss","Yorker", "The Slot", "Length", "Short", "Bouncer" ]
     elif delivery_type == "Spin":
         ordered_keys = ["OP", "Full" , "Good", "Short"]
     else:
