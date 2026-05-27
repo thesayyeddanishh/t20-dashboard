@@ -143,17 +143,17 @@ else:
                 if f3 == "All":
                     df_filtered = df_raw.copy()
                 elif f3 == "FULL TOSS":
-                    df_filtered = df_raw[df_raw["BounceX"] <= 0.5]
+                    df_filtered = df_raw[df_raw["BounceX"] < 0.5]
                 elif f3 == "YORKER":
-                    df_filtered = df_raw[(df_raw["BounceX"] > 0.5) & (df_raw["BounceX"] <= 2.5)]
+                    df_filtered = df_raw[(df_raw["BounceX"] >= 0.5) & (df_raw["BounceX"] < 2.5)]
                 elif f3 == "THE SLOT":
-                    df_filtered = df_raw[(df_raw["BounceX"] > 2.5) & (df_raw["BounceX"] <= 5.8)]
+                    df_filtered = df_raw[(df_raw["BounceX"] >= 2.5) & (df_raw["BounceX"] < 5.8)]
                 elif f3 == "LENGTH":
-                    df_filtered = df_raw[(df_raw["BounceX"] > 5.8) & (df_raw["BounceX"] <= 8.0)]
+                    df_filtered = df_raw[(df_raw["BounceX"] >= 5.8) & (df_raw["BounceX"] < 8.0)]
                 elif f3 == "SHORT":
-                    df_filtered = df_raw[(df_raw["BounceX"] > 8.0) & (df_raw["BounceX"] <= 10.0)]
+                    df_filtered = df_raw[(df_raw["BounceX"] >= 8.0) & (df_raw["BounceX"] < 10.0)]
                 elif f3 == "BOUNCER":
-                    df_filtered = df_raw[df_raw["BounceX"] > 10.0]
+                    df_filtered = df_raw[df_raw["BounceX"] >= 10.0]
 
             elif f2 == "PACE":
                 f3 = st.selectbox("Select Pace", ["Above 140", "Below 125"])
@@ -186,17 +186,17 @@ else:
                 filter_label = f3
                 
                 if f3 == "FULL TOSS":
-                    df_filtered = df_role_base[df_role_base["BounceX"] <= 0.5]
+                    df_filtered = df_role_base[df_role_base["BounceX"] < 0.5]
                 elif f3 == "YORKER":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] > 0.5) & (df_role_base["BounceX"] <= 2.5)]
+                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 0.5) & (df_role_base["BounceX"] < 2.5)]
                 elif f3 == "THE SLOT":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] > 2.5) & (df_role_base["BounceX"] <= 5.8)]
+                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 2.5) & (df_role_base["BounceX"] < 5.8)]
                 elif f3 == "LENGTH":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] > 5.8) & (df_role_base["BounceX"] <= 8.0)]
+                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 5.8) & (df_role_base["BounceX"] < 8.0)]
                 elif f3 == "SHORT":
-                    df_filtered = df_role_base[(df_role_base["BounceX"] > 8.0) & (df_role_base["BounceX"] <= 10.0)]
+                    df_filtered = df_role_base[(df_role_base["BounceX"] >= 8.0) & (df_role_base["BounceX"] < 10.0)]
                 elif f3 == "BOUNCER":
-                    df_filtered = df_role_base[df_role_base["BounceX"] > 10.0]
+                    df_filtered = df_role_base[df_role_base["BounceX"] >= 10.0]
                     
             elif f2 in ["Economy by Pace", "% Balls by Pace"]:
                 f3 = st.selectbox("Select Pace Range", ["Above 140", "Below 125"])
