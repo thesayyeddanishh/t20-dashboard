@@ -262,7 +262,7 @@ else:
                 
                 leaderboard = df_filtered.groupby(batter_col).agg(
                     Runs=("Runs", "sum"),
-                    Balls_Faced=("Runs", "count"),
+                    Balls_Faced=("Runs", "size"),
                     Dismissals=("Wicket", lambda x: sorted(x).count(True))
                 ).reset_index()
                 
