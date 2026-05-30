@@ -115,25 +115,30 @@ def create_crease_beehive(df_in, delivery_type):
 
 ## --- CHART 2b: LATERAL PERFORMANCE BOXES (ax_boxes) ---
     
+    # 1. PRE-CALCULATION: Ensure Average exists before the loop
+    summary = summary.copy()
+    # Calculate Average: Runs / Wickets. Fill NaNs with 0.
+    summary["Avg"] = (summary["Runs"] / summary["Wickets"]).fillna(0)
+    
     num_regions = len(ordered_zones)
     box_width = 1 / num_regions
-    box_height = 1  # Increased slightly to fit two lines of text
+    box_height = 1  
     left = 0
     
-    # 4. COLOR NORMALIZATION BY STRIKE RATE
+    # 2. COLOR NORMALIZATION
     sr_values = summary["SR"].replace([np.inf, -np.inf], np.nan)
     sr_max = sr_values.max() if sr_values.max() > 0 else 200
     norm = mcolors.Normalize(vmin=0, vmax=sr_max)
     cmap = cm.get_cmap('Wistia')
 
-    # summary["Avg"] = (summary["Runs"] / summary["Wickets"]).replace([np.inf, -np.inf], summary["Runs"]).fillna(0)
-
+    # 3. DRAWING THE BOXES
     for index, row in summary.iterrows():
         runs = int(row["Runs"])
         outs = int(row["Wickets"])
-        avg = row.get("Avg", 0)
+        avg = row["Avg"]
         sr = row["SR"]
-    
+
+        # Handle display formatting
         if np.isnan(sr) or sr == np.inf:
             color = 'white'
             text_color = 'black'
@@ -142,77 +147,59 @@ def create_crease_beehive(df_in, delivery_type):
         else:
             color = cmap(norm(sr))
             sr_display = f"{sr:.0f}"
-            avg_display = f"{avg:.0f}"
-            
+            # If no wickets, display "-" to indicate undefined average, otherwise show avg
+            avg_display = f"{avg:.1f}" if outs > 0 else "-"
+    
             # Contrast logic for text
             r, g, b, a = color
             luminosity = 0.2126 * r + 0.7152 * g + 0.0722 * b
             text_color = 'white' if luminosity < 0.5 else 'black'
-        
+
         # Draw the box
         ax_boxes.add_patch(patches.Rectangle((left, 0), box_width, box_height, 
-                                             edgecolor="black", facecolor=color, linewidth=1))
-    
+                                         edgecolor="black", facecolor=color, linewidth=1))
+
         # Zone Name (e.g., STUMPS)
         ax_boxes.text(left + box_width / 2, box_height + 0.05, index, 
-                      ha='center', va='bottom', fontsize=8, fontweight='bold', color='black')
-    
-        # --- UPDATED TEXT: Multi-line Format ---
-        # Line 1: Runs and Outs
+                  ha='center', va='bottom', fontsize=8, fontweight='bold', color='black')
+
+        # Text: Multi-line Format
         label_top = f"{runs} R, {outs} W"
-        # Line 2: Avg and SR
         label_bottom = f"{avg_display} Avg, {sr_display} SR"
-        
-        # Position Line 1 slightly above center
+
         ax_boxes.text(left + box_width / 2, box_height * 0.65, label_top, 
-                      ha='center', va='center', fontsize=8, fontweight='bold', color=text_color)
-        
-        # Position Line 2 slightly below center
+                  ha='center', va='center', fontsize=8, fontweight='bold', color=text_color)
+
         ax_boxes.text(left + box_width / 2, box_height * 0.35, label_bottom, 
-                      ha='center', va='center', fontsize=8, fontweight='bold', color=text_color)
-    
+                  ha='center', va='center', fontsize=8, fontweight='bold', color=text_color)
+
         left += box_width
 
-    # Formatting and Border logic...
+    # 4. FINAL FORMATTING
     ax_boxes.set_xlim(0, 1)
-    ax_boxes.set_ylim(-0.1, box_height + 0.3) # Adjusted limits for better spacing
+    ax_boxes.set_ylim(-0.1, box_height + 0.3)
     ax_boxes.axis('off')
-    
-    plt.tight_layout(pad=0.2)
-    
-    # Define Padding Value (in figure coordinates)
-    PADDING = 0.008
 
-    # 2. Get the bounding box of the two subplots in Figure coordinates
+    plt.tight_layout(pad=0.2)
+
+    # BORDER LOGIC
+    PADDING = 0.008
     bh_bbox = ax_bh.get_position()
     box_bbox = ax_boxes.get_position()
-    
-    # Determine the total bounds (original compact bounds)
+
     x0_orig = min(bh_bbox.x0, box_bbox.x0)
     y0_orig = box_bbox.y0
     x1_orig = max(bh_bbox.x1, box_bbox.x1)
     y1_orig = bh_bbox.y1
-    
-    # 3. Apply Padding
-    x0_pad = x0_orig - PADDING
-    y0_pad = y0_orig - PADDING
-    
-    # Width and Height must be increased by 2*PADDING (one for each side)
-    width_pad = (x1_orig - x0_orig) + (2 * PADDING)
-    height_pad = (y1_orig - y0_orig) + (2 * PADDING)
 
-    # 4. Draw the custom Rectangle using the padded bounds
     border_rect = patches.Rectangle(
-        (x0_pad, y0_pad), 
-        width_pad, 
-        height_pad,  
-        facecolor='none', 
-        edgecolor='black', 
-        linewidth=0.5, 
-        transform=fig.transFigure, # Use the figure's coordinate system
-        clip_on=False
+        (x0_orig - PADDING, y0_orig - PADDING), 
+        (x1_orig - x0_orig) + (2 * PADDING), 
+        (y1_orig - y0_orig) + (2 * PADDING),  
+        facecolor='none', edgecolor='black', linewidth=0.5, 
+        transform=fig.transFigure, clip_on=False
     )
-
+        
     fig.patches.append(border_rect)
 
     return fig
