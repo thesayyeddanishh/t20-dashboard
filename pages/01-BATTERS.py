@@ -1029,8 +1029,7 @@ if 'data_df' not in st.session_state:
 # Retrieve the full raw DataFrame
 df_raw = st.session_state['data_df']
 with st.sidebar:
-    st.title("MEN'S")
-    st.write("Red Ball")
+    st.write("Men's T20s")
 # 1. Define columns with appropriate widths
 col_title_space, col_legend, col_dataname = st.columns([1, 2.5, 1.5]) 
 
