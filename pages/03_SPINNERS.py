@@ -903,7 +903,7 @@ if 'data_df' not in st.session_state:
 df_raw = st.session_state['data_df']
 with st.sidebar:
     st.title("MEN'S")
-    st.write("Red Ball")
+    st.write("For Men's T20s only")
 # 1. Define columns with appropriate widths
 col_title_space, col_legend, col_dataname = st.columns([1.5, 2.5, 1.5]) 
 
