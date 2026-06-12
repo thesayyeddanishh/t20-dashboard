@@ -130,7 +130,7 @@ def create_crease_beehive(df_in, delivery_type):
     sr_values = summary["SR"].replace([np.inf, -np.inf], np.nan)
     sr_max = sr_values.max() if sr_values.max() > 0 else 200
     norm = mcolors.Normalize(vmin=0, vmax=sr_max)
-    cmap = matplotlib.get_cmap('Wistia')
+    cmap = plt.get_cmap('Wistia')
 
     # 3. DRAWING THE BOXES
     for index, row in summary.iterrows():
@@ -646,7 +646,7 @@ def create_interception_side_on(df_in, delivery_type):
     max_sr = max_sr_val if max_sr_val > 0 else 200 # Default max for scaling
     
     norm = mcolors.Normalize(vmin=0, vmax=max_sr)
-    cmap = matplotlib.get_cmap(COLORMAP)
+    cmap = plt.get_cmap(COLORMAP)
     
     for index, row in df_summary.iterrows():
         runs = int(row["Runs"])
