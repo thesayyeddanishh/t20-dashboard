@@ -13,7 +13,7 @@ from matplotlib import cm, colors, patches
 import matplotlib.colors as mcolors
 from matplotlib.gridspec import GridSpec
 from math import floor, ceil
-
+from matplotlib import colormaps
 # =========================================================
 # --- CHART 2: PITCH MAP (BOUNCE LOCATION) ---
 # =========================================================
