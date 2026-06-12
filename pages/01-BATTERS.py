@@ -130,8 +130,8 @@ def create_crease_beehive(df_in, delivery_type):
     sr_values = summary["SR"].replace([np.inf, -np.inf], np.nan)
     sr_max = sr_values.max() if sr_values.max() > 0 else 200
     norm = mcolors.Normalize(vmin=0, vmax=sr_max)
-    # cmap = plt.get_cmap('Wistia')
-    cmap = colormaps['Wistia']
+    cmap = plt.get_cmap('Wistia')
+    # cmap = colormaps['Wistia']
 
     # 3. DRAWING THE BOXES
     for index, row in summary.iterrows():
