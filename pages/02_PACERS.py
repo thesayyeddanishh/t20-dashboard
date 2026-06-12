@@ -1,8 +1,7 @@
-import matplotlib
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
+import plotly.graph_objects as go 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.cm as cm
@@ -10,8 +9,9 @@ import matplotlib.colors as mcolors
 from io import StringIO
 import base64
 import matplotlib.patheffects as pe
-from matplotlib.backends.backend_pdf import PdfPages
-import io, zipfile
+from matplotlib import cm, colors, patches
+import matplotlib.colors as mcolors
+from matplotlib.gridspec import GridSpec
 
 
 # --- CHART 3: PITCHMAP (BOUNCE LOCATION) ---
@@ -352,9 +352,8 @@ def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and
     # Color Normalization
     eco_values = summary["Economy"].dropna()
     norm = mcolors.Normalize(vmin=3, vmax=9) 
-    cmap = plt.get_cmap('Wistia')
-    # from matplotlib import colormaps 
-    # cmap = colormaps['Wistia'] 
+    # cmap = plt.get_cmap('Wistia')
+    cmap = colormaps['Wistia']
 
     for index, row in summary.iterrows():
         eco = row["Economy"]
