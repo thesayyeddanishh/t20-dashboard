@@ -647,7 +647,7 @@ def create_interception_side_on(df_in, delivery_type):
     max_sr = max_sr_val if max_sr_val > 0 else 200 # Default max for scaling
     
     norm = mcolors.Normalize(vmin=0, vmax=max_sr)
-    # cmap = plt.get_cmap(COLORMAP)
+    cmap = plt.get_cmap(COLORMAP)
     
     for index, row in df_summary.iterrows():
         runs = int(row["Runs"])
