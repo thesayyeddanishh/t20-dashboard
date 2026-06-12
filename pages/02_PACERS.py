@@ -353,9 +353,9 @@ def create_pacer_crease_beehive(df_in, handedness_label): # Renamed function and
     # Color Normalization
     eco_values = summary["Economy"].dropna()
     norm = mcolors.Normalize(vmin=3, vmax=9) 
-    # cmap = plt.get_cmap('Wistia')
-    from matplotlib import colormaps 
-    cmap = colormaps['Wistia'] 
+    cmap = plt.get_cmap('Wistia')
+    # from matplotlib import colormaps 
+    # cmap = colormaps['Wistia'] 
 
     for index, row in summary.iterrows():
         eco = row["Economy"]
