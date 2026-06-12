@@ -12,7 +12,7 @@ import matplotlib.patheffects as pe
 from matplotlib import cm, colors, patches
 import matplotlib.colors as mcolors
 from matplotlib.gridspec import GridSpec
-from matplotlib import colormaps
+from matplotlib import colormaps 
 
 
 # --- CHART 3: PITCHMAP (BOUNCE LOCATION) ---
