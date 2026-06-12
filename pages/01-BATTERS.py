@@ -1,3 +1,5 @@
+import matplotlib
+st.write(matplotlib.__version__)
 import streamlit as st
 import pandas as pd
 import numpy as np
