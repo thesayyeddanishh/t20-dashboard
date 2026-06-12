@@ -363,6 +363,7 @@ def create_Spinner_crease_beehive(df_in, handedness_label): # Renamed function a
     eco_max = eco_values.max() if eco_values.max() > 0 else 18 # Use a suitable default max
     norm = mcolors.Normalize(vmin=0, vmax=eco_max) 
     # cmap = plt.get_cmap('Wistia')
+    from matplotlib import colormaps 
     cmap = colormaps['Wistia'] 
 
     for index, row in summary.iterrows():
